@@ -200,7 +200,7 @@ export default function HomePage({
           <div>
             <div style={{ display:"flex", alignItems:"center", gap:7 }}>
               <Logo size={32} />
-              <span style={{ fontSize:20, fontWeight:900, color:C.text, letterSpacing:"-0.4px" }}>ReMarket</span>
+              <span style={{ fontSize:20, fontWeight:900, color:C.text, letterSpacing:"-0.4px" }}>ReQurilish</span>
             </div>
             <div style={{ fontSize:10, color:C.textMuted, marginTop:1 }}>Qayta ishlangan qurilish materiallari</div>
           </div>

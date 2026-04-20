@@ -72,6 +72,24 @@ export const INIT_PRODUCTS = [
 export const INIT_USER = { id:1, name:"Abdulloh Karimov", phone:"+998 90 123 45 67", telegram:"@abdulloh_k", avatar:null, joined:"2024-03-15" };
 export const EMPTY_FORM = { name:"", category:"g'isht", price:"", unit:"dona", qty:"", viloyat:"", tuman:"", condition:"A'lo", photos:[], mahalla:"" };
 
+export const APP_NAME = "ReQurilish";
+
+export const STATUS_LABELS = {
+  active:           "Faol",
+  pending_approval: "Tekshiruvda",
+  pending_payment:  "To'lov kutmoqda",
+  hidden:           "Yashirilgan",
+  deleted:          "O'chirilgan",
+};
+
+export const STATUS_COLORS = {
+  active:           { bg:"#E8F8F0", color:"#28A869" },
+  pending_approval: { bg:"#FFFBEB", color:"#D97706" },
+  pending_payment:  { bg:"#EFF6FF", color:"#2563EB" },
+  hidden:           { bg:"#F3F4F6", color:"#6B7280" },
+  deleted:          { bg:"#FFF1F0", color:"#EF4444" },
+};
+
 // Operator ma'lumotlari (real app da backenddan keladi)
 export const OPERATOR = {
   telegram: "@Requrilish_admin",

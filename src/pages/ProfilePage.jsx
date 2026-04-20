@@ -7,38 +7,31 @@ import { authAPI } from "../services/api";
 import {
   Package, Calendar, Inbox, Trash2,
   Pencil, Check, LogOut, Lock, CreditCard,
-  User, Send, MapPin, Wallet, Clock, AlertCircle, CheckCircle, XCircle,
+  User, Send, MapPin, Wallet, Clock, AlertCircle, CheckCircle, XCircle, Eye,
 } from "lucide-react";
 
 function StatusBadge({ status, rejectReason }) {
-  if (status === "approved") return (
-    <span style={{ fontSize:9, padding:"2px 7px", borderRadius:8,
-                   background:"#E8F8F0", color:"#28A869", fontWeight:700,
-                   display:"inline-flex", alignItems:"center", gap:3 }}>
-      <CheckCircle size={9} /> Tasdiqlangan
-    </span>
-  );
-  if (status === "rejected") return (
+  const map = {
+    active:           { bg:"#E8F8F0", color:"#28A869", icon:<CheckCircle size={9}/>, label:"Faol" },
+    pending_approval: { bg:"#FFFBEB", color:"#D97706", icon:<Clock size={9}/>,       label:"Tekshiruvda" },
+    pending_payment:  { bg:"#EFF6FF", color:"#2563EB", icon:<AlertCircle size={9}/>, label:"To'lov kutmoqda" },
+    hidden:           { bg:"#F3F4F6", color:"#6B7280", icon:<XCircle size={9}/>,     label:"Yashirilgan" },
+    deleted:          { bg:"#FFF1F0", color:"#FF4D4F", icon:<XCircle size={9}/>,     label:"O'chirilgan" },
+  };
+  const s = map[status] || map.pending_approval;
+  return (
     <div>
       <span style={{ fontSize:9, padding:"2px 7px", borderRadius:8,
-                     background:"#FFF1F0", color:"#FF4D4F", fontWeight:700,
+                     background:s.bg, color:s.color, fontWeight:700,
                      display:"inline-flex", alignItems:"center", gap:3 }}>
-        <XCircle size={9} /> Rad etildi
+        {s.icon} {s.label}
       </span>
-      {rejectReason && (
+      {rejectReason && status === "deleted" && (
         <div style={{ fontSize:9, color:"#FF4D4F", marginTop:2, fontStyle:"italic" }}>
           Sabab: {rejectReason}
         </div>
       )}
     </div>
-  );
-  // pending
-  return (
-    <span style={{ fontSize:9, padding:"2px 7px", borderRadius:8,
-                   background:"#FFFBEB", color:"#D4920A", fontWeight:700,
-                   display:"inline-flex", alignItems:"center", gap:3 }}>
-      <Clock size={9} /> Tekshirilmoqda
-    </span>
   );
 }
 
@@ -59,8 +52,8 @@ export default function ProfilePage({ user, setUser, myProducts, onDelete, onLog
   };
   const cancel = () => { setDraft({ name: user.name, avatar: user.avatar }); setEditMode(false); };
 
-  const pendingCount  = myProducts.filter(p => p.status === "pending").length;
-  const rejectedCount = myProducts.filter(p => p.status === "rejected").length;
+  const pendingCount  = myProducts.filter(p => p.status === "pending_approval" || p.status === "pending_payment").length;
+  const rejectedCount = myProducts.filter(p => p.status === "deleted" && p.rejectedReason).length;
 
   return (
     <div style={{ padding:"20px 16px 10px", overflowY:"auto", fontFamily:"'Nunito','Segoe UI',sans-serif",
