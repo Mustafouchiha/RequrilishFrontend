@@ -4,8 +4,9 @@ import { operatorAPI } from "../services/api";
 import {
   Search, Trash2, Users, Package, ChevronLeft,
   Loader2, CheckCircle, XCircle, EyeOff, Eye,
-  Lock, Unlock, Clock, CreditCard, BarChart2,
-  AlertTriangle, RefreshCw,
+  Lock, Unlock, Clock, CreditCard, CheckSquare,
+  AlertTriangle, RefreshCw, PlusCircle, MinusCircle,
+  Shield, UserPlus, UserMinus, Wallet,
 } from "lucide-react";
 
 const phoneCore = (v) => {
@@ -19,7 +20,6 @@ const fmtPhone = (v) => {
 };
 const fmtPrice = (n) => Number(n || 0).toLocaleString("uz-UZ") + " so'm";
 
-// ── Tasdiqlash badge ─────────────────────────────────────────────
 function StatusBadge({ status }) {
   const map = {
     active:           { bg:"#E8F8F0", color:"#28A869", label:"Faol" },
@@ -38,7 +38,6 @@ function StatusBadge({ status }) {
   );
 }
 
-// ── Confirm dialog ───────────────────────────────────────────────
 function ConfirmDialog({ title, message, onConfirm, onCancel, danger = true }) {
   return (
     <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.5)",
@@ -69,7 +68,6 @@ function ConfirmDialog({ title, message, onConfirm, onCancel, danger = true }) {
   );
 }
 
-// ── Reject dialog ────────────────────────────────────────────────
 function RejectDialog({ onConfirm, onCancel }) {
   const [reason, setReason] = useState("");
   return (
@@ -78,8 +76,8 @@ function RejectDialog({ onConfirm, onCancel }) {
                   padding:"0 20px" }}>
       <div style={{ background:"white", borderRadius:20, padding:"24px 20px",
                     width:"100%", maxWidth:360 }}>
-        <div style={{ fontSize:16, fontWeight:800, marginBottom:12, color:C.text }}>
-          ❌ Rad etish sababi
+        <div style={{ display:"flex", alignItems:"center", gap:8, fontSize:16, fontWeight:800, marginBottom:12, color:C.text }}>
+          <XCircle size={20} color={C.danger} /> Rad etish sababi
         </div>
         <textarea
           value={reason} onChange={e => setReason(e.target.value)}
@@ -108,22 +106,39 @@ function RejectDialog({ onConfirm, onCancel }) {
   );
 }
 
-// ── Deposit dialog ───────────────────────────────────────────────
-function DepositDialog({ user, onConfirm, onCancel }) {
+function AmountDialog({ title, Icon, iconColor, user, onConfirm, onCancel, maxAmount }) {
   const [amount, setAmount] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const handleConfirm = async () => {
+    if (!(Number(amount) > 0) || busy) return;
+    if (maxAmount !== undefined && Number(amount) > maxAmount) return;
+    setBusy(true);
+    try { await onConfirm(Number(amount)); }
+    catch { setBusy(false); }
+  };
+
+  const valid = Number(amount) > 0 && (maxAmount === undefined || Number(amount) <= maxAmount);
+
   return (
     <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.5)",
                   zIndex:999, display:"flex", alignItems:"center", justifyContent:"center",
                   padding:"0 20px" }}>
       <div style={{ background:"white", borderRadius:20, padding:"24px 20px",
                     width:"100%", maxWidth:360 }}>
-        <div style={{ fontSize:16, fontWeight:800, marginBottom:4, color:C.text }}>
-          💰 Pul qo'shish
+        <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:4 }}>
+          <Icon size={20} color={iconColor} />
+          <div style={{ fontSize:16, fontWeight:800, color:C.text }}>{title}</div>
         </div>
-        <div style={{ fontSize:12, color:C.textMuted, marginBottom:16 }}>{fmtPhone(user.phone)} — {user.name}</div>
+        <div style={{ fontSize:12, color:C.textMuted, marginBottom:16 }}>
+          {fmtPhone(user.phone)} — {user.name}
+          {maxAmount !== undefined && (
+            <span style={{ marginLeft:8, color:C.danger }}>Balans: {fmtPrice(maxAmount)}</span>
+          )}
+        </div>
         <input
           type="number" value={amount} onChange={e => setAmount(e.target.value)}
-          placeholder="Summa (so'm)"
+          placeholder="Summa (so'm)" autoFocus
           style={{ width:"100%", boxSizing:"border-box", padding:"10px 12px",
                    borderRadius:12, border:`1.5px solid ${C.border}`, fontSize:14,
                    fontFamily:"inherit", outline:"none", marginBottom:16 }}
@@ -134,11 +149,58 @@ function DepositDialog({ user, onConfirm, onCancel }) {
                      background:"white", fontSize:13, fontWeight:700, cursor:"pointer" }}>
             Bekor
           </button>
-          <button onClick={() => amount > 0 && onConfirm(Number(amount))}
-            disabled={!(amount > 0)}
+          <button onClick={handleConfirm} disabled={!valid || busy}
             style={{ flex:1, padding:"10px 0", borderRadius:12, border:"none",
-                     background: amount > 0 ? C.primaryDark : C.textMuted,
-                     color:"white", fontSize:13, fontWeight:700, cursor:"pointer" }}>
+                     background: (valid && !busy) ? iconColor : C.textMuted,
+                     color:"white", fontSize:13, fontWeight:700, cursor:"pointer",
+                     display:"flex", alignItems:"center", justifyContent:"center", gap:6 }}>
+            {busy ? <Loader2 size={14} style={{ animation:"spin 1s linear infinite" }} /> : <Icon size={14} />}
+            Tasdiqlash
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AddOperatorDialog({ onConfirm, onCancel }) {
+  const [phone, setPhone] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const handleConfirm = async () => {
+    if (!phone.trim() || busy) return;
+    setBusy(true);
+    try { await onConfirm(phone.trim()); }
+    catch { setBusy(false); }
+  };
+
+  return (
+    <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.5)",
+                  zIndex:999, display:"flex", alignItems:"center", justifyContent:"center",
+                  padding:"0 20px" }}>
+      <div style={{ background:"white", borderRadius:20, padding:"24px 20px", width:"100%", maxWidth:360 }}>
+        <div style={{ display:"flex", alignItems:"center", gap:8, fontSize:16, fontWeight:800, marginBottom:12, color:C.text }}>
+          <UserPlus size={20} color={C.primaryDark} /> Operator qo'shish
+        </div>
+        <div style={{ fontSize:12, color:C.textMuted, marginBottom:12 }}>
+          Foydalanuvchining telefon raqamini kiriting:
+        </div>
+        <input value={phone} onChange={e => setPhone(e.target.value)} placeholder="901234567" autoFocus
+          style={{ width:"100%", boxSizing:"border-box", padding:"10px 12px",
+                   borderRadius:12, border:`1.5px solid ${C.border}`, fontSize:14,
+                   fontFamily:"inherit", outline:"none", marginBottom:16 }} />
+        <div style={{ display:"flex", gap:10 }}>
+          <button onClick={onCancel}
+            style={{ flex:1, padding:"10px 0", borderRadius:12, border:`1.5px solid ${C.border}`,
+                     background:"white", fontSize:13, fontWeight:700, cursor:"pointer" }}>
+            Bekor
+          </button>
+          <button onClick={handleConfirm} disabled={!phone.trim() || busy}
+            style={{ flex:1, padding:"10px 0", borderRadius:12, border:"none",
+                     background: phone.trim() && !busy ? C.primaryDark : C.textMuted,
+                     color:"white", fontSize:13, fontWeight:700, cursor:"pointer",
+                     display:"flex", alignItems:"center", justifyContent:"center", gap:6 }}>
+            {busy ? <Loader2 size={14} style={{ animation:"spin 1s linear infinite" }} /> : <UserPlus size={14} />}
             Qo'shish
           </button>
         </div>
@@ -147,39 +209,41 @@ function DepositDialog({ user, onConfirm, onCancel }) {
   );
 }
 
-// ── Tabs ─────────────────────────────────────────────────────────
 const TABS = [
-  ["approval", "✅", "Tasdiqlash"],
-  ["users",    "👥", "Foydalanuvchilar"],
-  ["products", "📦", "Mahsulotlar"],
-  ["payments", "💳", "To'lovlar"],
+  { key: "approval",  Icon: CheckSquare, label: "Tasdiqlash" },
+  { key: "users",     Icon: Users,       label: "Foydalanuvchilar" },
+  { key: "products",  Icon: Package,     label: "Mahsulotlar" },
+  { key: "payments",  Icon: CreditCard,  label: "To'lovlar" },
+  { key: "operators", Icon: Shield,      label: "Operatorlar" },
 ];
 
-export default function OperatorPage({ onBack }) {
+export default function OperatorPage({ onBack, user }) {
+  const isMainOp = (user?.phone || "").replace(/\D/g,"").slice(-9) === "331350206";
+  const visibleTabs = isMainOp ? TABS : TABS.filter(t => t.key !== "operators");
+
   const [tab,        setTab]        = useState("approval");
   const [loading,    setLoading]    = useState(false);
   const [err,        setErr]        = useState("");
   const [toast,      setToast]      = useState("");
 
-  // Approval
   const [pending,    setPending]    = useState([]);
   const [rejectTarget, setRejectTarget] = useState(null);
 
-  // Users
   const [users,      setUsers]      = useState([]);
   const [userQ,      setUserQ]      = useState("");
   const [confirmDlg, setConfirmDlg] = useState(null);
   const [depositUser, setDepositUser] = useState(null);
+  const [withdrawUser, setWithdrawUser] = useState(null);
 
-  // Products
   const [prods,      setProds]      = useState([]);
   const [prodQ,      setProdQ]      = useState("");
   const [prodStatus, setProdStatus] = useState("");
 
-  // Payments
   const [payments,   setPayments]   = useState([]);
 
-  // Stats
+  const [operators,  setOperators]  = useState([]);
+  const [addOpDlg,   setAddOpDlg]   = useState(false);
+
   const [stats,      setStats]      = useState(null);
 
   const showToast = (msg) => {
@@ -187,7 +251,6 @@ export default function OperatorPage({ onBack }) {
     setTimeout(() => setToast(""), 2800);
   };
 
-  // ── Load by tab ───────────────────────────────────────────────
   const loadTab = useCallback(async (t = tab) => {
     setLoading(true);
     setErr("");
@@ -208,6 +271,9 @@ export default function OperatorPage({ onBack }) {
       } else if (t === "payments") {
         const data = await operatorAPI.getPayments();
         setPayments(data);
+      } else if (t === "operators") {
+        const data = await operatorAPI.getOperators();
+        setOperators(data);
       }
     } catch (e) {
       setErr(e.message);
@@ -218,13 +284,12 @@ export default function OperatorPage({ onBack }) {
 
   useEffect(() => { loadTab(tab); }, [tab]);
 
-  // ── Approval actions ─────────────────────────────────────────
   const handleApprove = async (id) => {
     try {
       await operatorAPI.approvePost(id);
       setPending(prev => prev.filter(p => p.id !== id));
-      showToast("✅ Tasdiqlandi!");
-    } catch (e) { showToast("❌ " + e.message); }
+      showToast("Tasdiqlandi!");
+    } catch (e) { showToast("Xato: " + e.message); }
   };
 
   const handleReject = async (id, reason) => {
@@ -232,22 +297,21 @@ export default function OperatorPage({ onBack }) {
       await operatorAPI.rejectPost(id, reason);
       setPending(prev => prev.filter(p => p.id !== id));
       setRejectTarget(null);
-      showToast("❌ Rad etildi");
-    } catch (e) { showToast("❌ " + e.message); }
+      showToast("Rad etildi");
+    } catch (e) { showToast("Xato: " + e.message); }
   };
 
-  // ── User actions ─────────────────────────────────────────────
   const handleBlock = async (u) => {
     try {
       if (u.is_blocked) {
         await operatorAPI.unblockUser(u.id);
-        showToast("🔓 Blok ochildi");
+        showToast("Blok ochildi");
       } else {
         await operatorAPI.blockUser(u.id);
-        showToast("🔒 Bloklandi");
+        showToast("Bloklandi");
       }
       setUsers(prev => prev.map(x => x.id === u.id ? { ...x, is_blocked: !x.is_blocked } : x));
-    } catch (e) { showToast("❌ " + e.message); }
+    } catch (e) { showToast("Xato: " + e.message); }
     setConfirmDlg(null);
   };
 
@@ -255,33 +319,37 @@ export default function OperatorPage({ onBack }) {
     try {
       await operatorAPI.deleteUser(id);
       setUsers(prev => prev.filter(u => u.id !== id));
-      showToast("🗑 O'chirildi");
-    } catch (e) { showToast("❌ " + e.message); }
+      showToast("O'chirildi");
+    } catch (e) { showToast("Xato: " + e.message); }
     setConfirmDlg(null);
   };
 
   const handleDeposit = async (u, amount) => {
-    try {
-      await operatorAPI.deposit(u.phone, amount);
-      setDepositUser(null);
-      showToast(`💰 ${amount.toLocaleString()} so'm qo'shildi`);
-      loadTab("users");
-    } catch (e) { showToast("❌ " + e.message); }
+    await operatorAPI.deposit(u.phone, amount);
+    setDepositUser(null);
+    showToast(`${amount.toLocaleString()} so'm qo'shildi`);
+    loadTab("users");
   };
 
-  // ── Product actions ──────────────────────────────────────────
+  const handleWithdraw = async (u, amount) => {
+    await operatorAPI.withdraw(u.phone, amount);
+    setWithdrawUser(null);
+    showToast(`${amount.toLocaleString()} so'm ayirildi`);
+    loadTab("users");
+  };
+
   const handleHideShow = async (p) => {
     try {
       if (p.status === "hidden") {
         await operatorAPI.showPost(p.id);
         setProds(prev => prev.map(x => x.id === p.id ? { ...x, status: "active" } : x));
-        showToast("👁 Ko'rsatildi");
+        showToast("Ko'rsatildi");
       } else {
         await operatorAPI.hidePost(p.id);
         setProds(prev => prev.map(x => x.id === p.id ? { ...x, status: "hidden" } : x));
-        showToast("🙈 Yashirildi");
+        showToast("Yashirildi");
       }
-    } catch (e) { showToast("❌ " + e.message); }
+    } catch (e) { showToast("Xato: " + e.message); }
     setConfirmDlg(null);
   };
 
@@ -289,26 +357,41 @@ export default function OperatorPage({ onBack }) {
     try {
       await operatorAPI.deletePost(id);
       setProds(prev => prev.filter(p => p.id !== id));
-      showToast("🗑 O'chirildi");
-    } catch (e) { showToast("❌ " + e.message); }
+      showToast("O'chirildi");
+    } catch (e) { showToast("Xato: " + e.message); }
     setConfirmDlg(null);
   };
 
-  // ── Payment confirm ──────────────────────────────────────────
   const handleConfirmPayment = async (offerId) => {
     try {
       await operatorAPI.confirmPayment(offerId);
       setPayments(prev => prev.filter(p => p.offer_id !== offerId));
-      showToast("✅ To'lov tasdiqlandi, bitim yakunlandi!");
-    } catch (e) { showToast("❌ " + e.message); }
+      showToast("To'lov tasdiqlandi, bitim yakunlandi!");
+    } catch (e) { showToast("Xato: " + e.message); }
+    setConfirmDlg(null);
+  };
+
+  const handleAddOperator = async (phone) => {
+    await operatorAPI.addOperator(phone);
+    setAddOpDlg(false);
+    showToast("Operator qo'shildi");
+    loadTab("operators");
+  };
+
+  const handleRemoveOperator = async (id) => {
+    try {
+      await operatorAPI.removeOperator(id);
+      setOperators(prev => prev.filter(o => o.id !== id));
+      showToast("Operator o'chirildi");
+    } catch (e) { showToast("Xato: " + e.message); }
     setConfirmDlg(null);
   };
 
   return (
     <div style={{ minHeight:"100vh", background:C.bg, maxWidth:430, margin:"0 auto",
                   fontFamily:"'Nunito','Segoe UI',sans-serif", paddingBottom:20 }}>
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
 
-      {/* Toast */}
       {toast && (
         <div style={{ position:"fixed", top:20, left:"50%", transform:"translateX(-50%)",
                       background:"#1C1C1E", color:"white", padding:"10px 18px",
@@ -318,11 +401,10 @@ export default function OperatorPage({ onBack }) {
         </div>
       )}
 
-      {/* Confirm dialogs */}
       {confirmDlg?.type === "delete-user" && (
         <ConfirmDialog
           title="Foydalanuvchini o'chirish"
-          message={`"${confirmDlg.data.name}" ni o'chirishni tasdiqlaysizmi? Uning postlari qoladi.`}
+          message={`"${confirmDlg.data.name}" ni o'chirishni tasdiqlaysizmi?`}
           onConfirm={() => handleDeleteUser(confirmDlg.data.id)}
           onCancel={() => setConfirmDlg(null)}
         />
@@ -362,6 +444,14 @@ export default function OperatorPage({ onBack }) {
           onCancel={() => setConfirmDlg(null)}
         />
       )}
+      {confirmDlg?.type === "remove-operator" && (
+        <ConfirmDialog
+          title="Operatorni o'chirish"
+          message={`"${confirmDlg.data.name}" operatorligini bekor qilasizmi?`}
+          onConfirm={() => handleRemoveOperator(confirmDlg.data.id)}
+          onCancel={() => setConfirmDlg(null)}
+        />
+      )}
       {rejectTarget && (
         <RejectDialog
           onConfirm={(reason) => handleReject(rejectTarget, reason)}
@@ -369,10 +459,26 @@ export default function OperatorPage({ onBack }) {
         />
       )}
       {depositUser && (
-        <DepositDialog
+        <AmountDialog
+          title="Pul qo'shish" Icon={PlusCircle} iconColor={C.primaryDark}
           user={depositUser}
           onConfirm={(amount) => handleDeposit(depositUser, amount)}
           onCancel={() => setDepositUser(null)}
+        />
+      )}
+      {withdrawUser && (
+        <AmountDialog
+          title="Pul ayirish" Icon={MinusCircle} iconColor={C.danger}
+          user={withdrawUser}
+          maxAmount={Number(withdrawUser.balance || 0)}
+          onConfirm={(amount) => handleWithdraw(withdrawUser, amount)}
+          onCancel={() => setWithdrawUser(null)}
+        />
+      )}
+      {addOpDlg && (
+        <AddOperatorDialog
+          onConfirm={handleAddOperator}
+          onCancel={() => setAddOpDlg(false)}
         />
       )}
 
@@ -385,7 +491,7 @@ export default function OperatorPage({ onBack }) {
                      borderRadius:10, padding:"6px 10px", cursor:"pointer", display:"flex" }}>
             <ChevronLeft size={18} />
           </button>
-          <div style={{ fontSize:18, fontWeight:900 }}>🏗 Operator Panel</div>
+          <div style={{ fontSize:18, fontWeight:900 }}>Operator Panel</div>
           <button onClick={() => loadTab(tab)}
             style={{ marginLeft:"auto", background:"rgba(255,255,255,0.2)", border:"none",
                      color:"white", borderRadius:10, padding:"6px 10px", cursor:"pointer", display:"flex" }}>
@@ -393,18 +499,19 @@ export default function OperatorPage({ onBack }) {
           </button>
         </div>
 
-        {/* Stats row */}
         {stats && (
           <div style={{ display:"flex", gap:8 }}>
             {[
-              ["👥", stats.total_users, "Foydalanuvchi"],
-              ["📦", stats.active_products, "Faol post"],
-              ["⏳", stats.pending_approval, "Navbatda"],
-              ["💳", stats.pending_payments, "To'lov"],
-            ].map(([ico, val, lbl]) => (
+              [Users, stats.total_users, "Foydalanuvchi"],
+              [Package, stats.active_products, "Faol post"],
+              [Clock, stats.pending_approval, "Navbatda"],
+              [CreditCard, stats.pending_payments, "To'lov"],
+            ].map(([Icon, val, lbl]) => (
               <div key={lbl} style={{ flex:1, background:"rgba(255,255,255,0.18)",
                                       borderRadius:10, padding:"6px 4px", textAlign:"center" }}>
-                <div style={{ fontSize:14 }}>{ico}</div>
+                <div style={{ display:"flex", justifyContent:"center", marginBottom:2 }}>
+                  <Icon size={14} color="white" />
+                </div>
                 <div style={{ fontSize:14, fontWeight:900 }}>{val || 0}</div>
                 <div style={{ fontSize:8, opacity:0.85 }}>{lbl}</div>
               </div>
@@ -416,16 +523,16 @@ export default function OperatorPage({ onBack }) {
       {/* Tab bar */}
       <div style={{ display:"flex", background:"white", borderBottom:`1px solid ${C.border}`,
                     position:"sticky", top:0, zIndex:10 }}>
-        {TABS.map(([key, ico, lbl]) => (
+        {visibleTabs.map(({ key, Icon, label }) => (
           <button key={key} onClick={() => setTab(key)}
             style={{ flex:1, padding:"10px 4px", border:"none", background:"transparent",
-                     cursor:"pointer", fontFamily:"inherit", fontSize:10, fontWeight:700,
+                     cursor:"pointer", fontFamily:"inherit", fontSize:9, fontWeight:700,
                      color: tab===key ? C.primaryDark : C.textMuted,
                      borderBottom: tab===key ? `2.5px solid ${C.primaryDark}` : "2.5px solid transparent",
-                     display:"flex", flexDirection:"column", alignItems:"center", gap:2,
+                     display:"flex", flexDirection:"column", alignItems:"center", gap:3,
                      transition:"all .15s" }}>
-            <span style={{ fontSize:16 }}>{ico}</span>
-            {lbl}
+            <Icon size={18} color={tab===key ? C.primaryDark : C.textMuted} />
+            {label}
             {key==="approval" && pending.length > 0 && (
               <span style={{ background:C.danger, color:"white", borderRadius:"50%",
                              width:16, height:16, fontSize:9, fontWeight:900,
@@ -446,16 +553,15 @@ export default function OperatorPage({ onBack }) {
         {loading && (
           <div style={{ display:"flex", justifyContent:"center", padding:40 }}>
             <Loader2 size={28} color={C.primaryDark} style={{ animation:"spin 1s linear infinite" }} />
-            <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
           </div>
         )}
 
-        {/* ── TASDIQLASH ── */}
+        {/* TASDIQLASH */}
         {!loading && tab === "approval" && (
           <div>
             {pending.length === 0 ? (
               <div style={{ textAlign:"center", padding:"50px 20px", color:C.textMuted }}>
-                <div style={{ fontSize:40, marginBottom:10 }}>✅</div>
+                <CheckCircle size={40} color="#28A869" style={{ marginBottom:10 }} />
                 <div style={{ fontSize:14, fontWeight:700 }}>Barcha postlar ko'rib chiqildi</div>
               </div>
             ) : pending.map(p => (
@@ -475,10 +581,10 @@ export default function OperatorPage({ onBack }) {
                     {fmtPrice(p.price)} / {p.unit}
                   </div>
                   <div style={{ fontSize:11, color:C.textSub, marginBottom:2 }}>
-                    📍 {p.viloyat}{p.tuman ? ", "+p.tuman : ""} · {p.qty} {p.unit}
+                    {p.viloyat}{p.tuman ? ", "+p.tuman : ""} · {p.qty} {p.unit}
                   </div>
                   <div style={{ fontSize:11, color:C.textSub, marginBottom:10 }}>
-                    👤 {p.ownerName} · {fmtPhone(p.ownerPhone)}
+                    {p.ownerName} · {fmtPhone(p.ownerPhone)}
                     {p.ownerTelegram && ` · ${p.ownerTelegram}`}
                   </div>
                   <div style={{ display:"flex", gap:8 }}>
@@ -503,7 +609,7 @@ export default function OperatorPage({ onBack }) {
           </div>
         )}
 
-        {/* ── FOYDALANUVCHILAR ── */}
+        {/* FOYDALANUVCHILAR */}
         {!loading && tab === "users" && (
           <div>
             <div style={{ position:"relative", marginBottom:12 }}>
@@ -519,7 +625,7 @@ export default function OperatorPage({ onBack }) {
 
             {users.map(u => (
               <div key={u.id} style={{ background:"white", borderRadius:14,
-                                       border:`1px solid ${u.is_blocked ? "#FCA5A5":"${C.border}"}`,
+                                       border:`1px solid ${u.is_blocked ? "#FCA5A5" : C.border}`,
                                        padding:"12px 14px", marginBottom:10,
                                        opacity: u.is_blocked ? 0.75 : 1 }}>
                 <div style={{ display:"flex", justifyContent:"space-between", marginBottom:4 }}>
@@ -531,26 +637,37 @@ export default function OperatorPage({ onBack }) {
                 </div>
                 <div style={{ fontSize:11, color:C.textSub, marginBottom:2 }}>{fmtPhone(u.phone)}</div>
                 {u.telegram && <div style={{ fontSize:11, color:C.textSub, marginBottom:2 }}>{u.telegram}</div>}
-                <div style={{ fontSize:11, color:C.textSub, marginBottom:10 }}>
-                  💰 {Number(u.balance || 0).toLocaleString()} so'm
-                  {u.tg_chat_id ? " · ✅ Bot" : " · ⚠️ Bot yo'q"}
+                <div style={{ fontSize:11, color:C.textSub, marginBottom:10, display:"flex", alignItems:"center", gap:6 }}>
+                  <Wallet size={12} color={C.textMuted} />
+                  {Number(u.balance || 0).toLocaleString()} so'm
+                  {u.tg_chat_id
+                    ? <><CheckCircle size={12} color="#28A869" /> Bot</>
+                    : <><XCircle size={12} color={C.danger} /> Bot yo'q</>}
                 </div>
                 <div style={{ display:"flex", gap:7 }}>
                   <button onClick={() => setDepositUser(u)}
-                    style={{ flex:1, padding:"7px 0", borderRadius:10, border:`1.5px solid ${C.border}`,
-                             background:"white", color:C.primaryDark, fontSize:11,
-                             fontWeight:700, cursor:"pointer" }}>
-                    💰 Pul
+                    style={{ flex:1, padding:"7px 0", borderRadius:10, border:`1.5px solid ${C.primaryBorder || C.border}`,
+                             background:"#E8F8F0", color:"#28A869", fontSize:11,
+                             fontWeight:700, cursor:"pointer", display:"flex",
+                             alignItems:"center", justifyContent:"center", gap:4 }}>
+                    <PlusCircle size={13} /> Qo'shish
+                  </button>
+                  <button onClick={() => setWithdrawUser(u)}
+                    style={{ flex:1, padding:"7px 0", borderRadius:10, border:`1.5px solid #FCA5A5`,
+                             background:"#FFF1F0", color:C.danger, fontSize:11,
+                             fontWeight:700, cursor:"pointer", display:"flex",
+                             alignItems:"center", justifyContent:"center", gap:4 }}>
+                    <MinusCircle size={13} /> Ayirish
                   </button>
                   <button onClick={() => setConfirmDlg({ type:"block-user", data:u })}
-                    style={{ flex:1, padding:"7px 0", borderRadius:10, border:"none",
+                    style={{ padding:"7px 10px", borderRadius:10, border:"none",
                              background: u.is_blocked ? "#E8F8F0" : "#FFF8E6",
                              color: u.is_blocked ? "#28A869" : "#D97706",
-                             fontSize:11, fontWeight:700, cursor:"pointer" }}>
-                    {u.is_blocked ? "🔓 Ochish" : "🔒 Blok"}
+                             fontSize:11, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center" }}>
+                    {u.is_blocked ? <Unlock size={13} /> : <Lock size={13} />}
                   </button>
                   <button onClick={() => setConfirmDlg({ type:"delete-user", data:u })}
-                    style={{ padding:"7px 12px", borderRadius:10, border:"none",
+                    style={{ padding:"7px 10px", borderRadius:10, border:"none",
                              background:"#FFF1F0", color:C.danger,
                              fontSize:11, fontWeight:700, cursor:"pointer" }}>
                     <Trash2 size={13} />
@@ -567,7 +684,7 @@ export default function OperatorPage({ onBack }) {
           </div>
         )}
 
-        {/* ── MAHSULOTLAR ── */}
+        {/* MAHSULOTLAR */}
         {!loading && tab === "products" && (
           <div>
             <div style={{ display:"flex", gap:8, marginBottom:12 }}>
@@ -638,7 +755,7 @@ export default function OperatorPage({ onBack }) {
           </div>
         )}
 
-        {/* ── TO'LOVLAR ── */}
+        {/* TO'LOVLAR */}
         {!loading && tab === "payments" && (
           <div>
             {payments.length === 0 ? (
@@ -657,19 +774,18 @@ export default function OperatorPage({ onBack }) {
                   {fmtPrice(p.amount)}
                 </div>
                 <div style={{ fontSize:11, color:C.textSub, marginBottom:2 }}>
-                  👤 Xaridor: {p.buyer_name} · {fmtPhone(p.buyer_phone)}
+                  Xaridor: {p.buyer_name} · {fmtPhone(p.buyer_phone)}
                 </div>
                 <div style={{ fontSize:11, color:C.textSub, marginBottom:2 }}>
-                  🏪 Sotuvchi: {p.seller_name} · {fmtPhone(p.seller_phone)}
+                  Sotuvchi: {p.seller_name} · {fmtPhone(p.seller_phone)}
                 </div>
                 {p.card_from && (
                   <div style={{ fontSize:11, color:C.textSub, marginBottom:2 }}>
-                    💳 Karta: {p.card_from}
+                    Karta: {p.card_from}
                   </div>
                 )}
                 {p.note && (
-                  <div style={{ fontSize:11, color:C.textMuted, marginBottom:8,
-                                fontStyle:"italic" }}>
+                  <div style={{ fontSize:11, color:C.textMuted, marginBottom:8, fontStyle:"italic" }}>
                     "{p.note}"
                   </div>
                 )}
@@ -682,6 +798,58 @@ export default function OperatorPage({ onBack }) {
                 </button>
               </div>
             ))}
+          </div>
+        )}
+
+        {/* OPERATORLAR (faqat bosh operator) */}
+        {!loading && tab === "operators" && isMainOp && (
+          <div>
+            <button onClick={() => setAddOpDlg(true)}
+              style={{ width:"100%", padding:"11px 0", borderRadius:13, border:"none",
+                       background:C.primaryDark, color:"white", fontSize:13, fontWeight:800,
+                       cursor:"pointer", display:"flex", alignItems:"center",
+                       justifyContent:"center", gap:7, marginBottom:14 }}>
+              <UserPlus size={16} /> Operator qo'shish
+            </button>
+
+            {operators.map(op => {
+              const isMain = (op.phone || "").replace(/\D/g,"").slice(-9) === "331350206";
+              return (
+                <div key={op.id} style={{ background:"white", borderRadius:14,
+                                           border:`1px solid ${C.border}`, padding:"12px 14px",
+                                           marginBottom:10, display:"flex",
+                                           alignItems:"center", gap:12 }}>
+                  <div style={{ width:40, height:40, borderRadius:12,
+                                background:`linear-gradient(135deg,${C.primary},${C.primaryDark})`,
+                                display:"flex", alignItems:"center", justifyContent:"center" }}>
+                    <Shield size={20} color="white" />
+                  </div>
+                  <div style={{ flex:1 }}>
+                    <div style={{ fontSize:13, fontWeight:800, color:C.text }}>{op.name}</div>
+                    <div style={{ fontSize:11, color:C.textSub }}>{fmtPhone(op.phone)}</div>
+                    {op.telegram && <div style={{ fontSize:11, color:C.textSub }}>{op.telegram}</div>}
+                  </div>
+                  {isMain ? (
+                    <span style={{ fontSize:10, padding:"3px 10px", borderRadius:8,
+                                   background:"#EFF6FF", color:"#2563EB", fontWeight:700 }}>
+                      Bosh
+                    </span>
+                  ) : (
+                    <button onClick={() => setConfirmDlg({ type:"remove-operator", data:op })}
+                      style={{ padding:"7px 10px", borderRadius:10, border:"none",
+                               background:"#FFF1F0", color:C.danger, cursor:"pointer" }}>
+                      <UserMinus size={15} />
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+            {operators.length === 0 && (
+              <div style={{ textAlign:"center", padding:"40px 20px", color:C.textMuted }}>
+                <Shield size={40} color={C.border} style={{ marginBottom:10 }} />
+                <div>Hali operator yo'q</div>
+              </div>
+            )}
           </div>
         )}
       </div>

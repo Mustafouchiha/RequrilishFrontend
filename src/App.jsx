@@ -12,7 +12,9 @@ const phoneCore = (v) => {
   const d = String(v || "").replace(/\D/g, "");
   return d.startsWith("998") ? d.slice(-9) : d.slice(-9);
 };
-const isOperator = (user) => user && OPERATOR_PHONES.includes(phoneCore(user.phone));
+const isOperator = (user) => user && (
+  OPERATOR_PHONES.includes(phoneCore(user.phone)) || user.role === "operator"
+);
 
 const savedUser = () => {
   try { return JSON.parse(localStorage.getItem("rm_user")) || null; }
@@ -264,7 +266,7 @@ export default function App() {
 
       {/* Logged in: operator */}
       {loggedIn && nav === "operator" && (
-        <OperatorPage onBack={() => setNav("profile")} />
+        <OperatorPage onBack={() => setNav("profile")} user={user} />
       )}
 
       {/* Logged in: profile */}

@@ -92,13 +92,23 @@ export const operatorAPI = {
   getStats: () =>
     apiFetch(`${BASE}/operator/stats`, { headers: headers() }).then(handle),
 
+  withdraw: (phone, amount) =>
+    apiFetch(`${BASE}/operator/withdraw`, { method: "POST", headers: headers(), body: JSON.stringify({ phone, amount }) }).then(handle),
+
+  // Operator management
+  getOperators: () =>
+    apiFetch(`${BASE}/operator/operators`, { headers: headers() }).then(handle),
+  addOperator: (phone) =>
+    apiFetch(`${BASE}/operator/operators`, { method: "POST", headers: headers(), body: JSON.stringify({ phone }) }).then(handle),
+  removeOperator: (id) =>
+    apiFetch(`${BASE}/operator/operators/${id}`, { method: "DELETE", headers: headers() }).then(handle),
+
   // Legacy
   setUserBlocked: (id, blocked) =>
     blocked ? operatorAPI.blockUser(id) : operatorAPI.unblockUser(id),
   deleteProduct: (id) => operatorAPI.deletePost(id),
   setProductActive: (id, active) =>
     active ? operatorAPI.showPost(id) : operatorAPI.hidePost(id),
-  withdraw: () => Promise.resolve({ message: "Not implemented" }),
 };
 
 // ─── PRODUCTS ─────────────────────────────────────────────────────

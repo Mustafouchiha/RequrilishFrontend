@@ -5,13 +5,11 @@ import { authAPI, setToken } from "../services/api";
 import Logo from "../components/Logo";
 import {
   Smartphone, Loader2,
-  KeyRound, CheckCircle, AlertTriangle, ArrowLeft, Send,
+  KeyRound, CheckCircle, AlertTriangle, ArrowLeft, Send, Lock,
 } from "lucide-react";
 
-// 90 999 90 90 formatida ko'rsatish
 function formatPhone(raw) {
   let d = raw.replace(/\D/g, "");
-  // Agar foydalanuvchi +998 yoki 998 bilan kiritsa, uni olib tashlaymiz
   if (d.startsWith("998")) d = d.slice(3);
   d = d.slice(0, 9);
   if (d.length <= 2) return d;
@@ -23,15 +21,16 @@ function formatPhone(raw) {
 const BOT_URL = import.meta.env.VITE_TG_BOT_URL || "https://t.me/Requrilishbot";
 
 export default function LoginPage({ onLogin }) {
-  const [mode,     setMode]     = useState("login");
-  const [step,     setStep]     = useState(1);
-  const [phone,    setPhone]    = useState("");
-  const [originPhone, setOriginPhone] = useState(""); // botdan kelgan asl raqam
-  const [name,     setName]     = useState("");
-  const [telegram, setTelegram] = useState("");
-  const [code,     setCode]     = useState("");
-  const [loading,  setLoading]  = useState(false);
-  const [error,    setError]    = useState("");
+  const [mode,        setMode]        = useState("login");
+  const [step,        setStep]        = useState(1);
+  const [phone,       setPhone]       = useState("");
+  const [originPhone, setOriginPhone] = useState("");
+  const [name,        setName]        = useState("");
+  const [telegram,    setTelegram]    = useState("");
+  const [tgLocked,    setTgLocked]    = useState(false); // telegram field locked from TG WebApp
+  const [code,        setCode]        = useState("");
+  const [loading,     setLoading]     = useState(false);
+  const [error,       setError]       = useState("");
 
   const normalizePhone = (v = "") => v.replace(/\D/g, "").slice(-9);
 
@@ -44,11 +43,9 @@ export default function LoginPage({ onLogin }) {
     const tgChatId = params.get("tgChatId");
     const isReg    = params.get("register") === "1";
 
-    // URL'ni tozalash
     window.history.replaceState({}, "", window.location.pathname);
 
     if (tgToken) {
-      // Mavjud foydalanuvchi — avtomatik kirish
       setLoading(true);
       authAPI.loginWithTgToken(tgToken)
         .then((data) => {
@@ -56,12 +53,11 @@ export default function LoginPage({ onLogin }) {
           localStorage.setItem("rm_user", JSON.stringify(data.user));
           onLogin(data.user);
         })
-        .catch(() => {
-          // Token eskirgan yoki yaroqsiz — login formani ko'rsat
-          setLoading(false);
-        });
-    } else if (isReg && tgPhone) {
-      // Yangi foydalanuvchi — bot orqali kelgan, avtomatik ro'yxatdan o'tish
+        .catch(() => setLoading(false));
+      return;
+    }
+
+    if (isReg && tgPhone) {
       const digits = tgPhone.replace(/\D/g, "").slice(-9);
       const cleanName = tgName || "Foydalanuvchi";
       setOriginPhone(digits);
@@ -78,15 +74,24 @@ export default function LoginPage({ onLogin }) {
           onLogin(data.user);
         })
         .catch((e) => {
-          // Ro'yxatdan o'tish muvaffaqiyatsiz bo'lsa — formani ko'rsat
           setMode("register");
           setPhone(formatPhone(digits));
           setName(cleanName);
-          if (tgUser) setTelegram(tgUser);
+          if (tgUser) { setTelegram(tgUser); setTgLocked(true); }
           if (tgChatId) window.__tgChatId = tgChatId;
           setError(e.message || "Xatolik yuz berdi");
           setLoading(false);
         });
+      return;
+    }
+
+    // Auto-fill from Telegram WebApp initDataUnsafe (no phone, but name/username available)
+    const tgWaUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
+    if (tgWaUser) {
+      const waName = [tgWaUser.first_name, tgWaUser.last_name].filter(Boolean).join(" ");
+      const waUsername = tgWaUser.username ? `@${tgWaUser.username}` : "";
+      if (waName) setName(waName);
+      if (waUsername) { setTelegram(waUsername); setTgLocked(true); }
     }
   }, []);
 
@@ -103,7 +108,6 @@ export default function LoginPage({ onLogin }) {
     }
 
     if (mode === "login") {
-      // Login: Telegram'ga OTP yuborish
       setLoading(true);
       try {
         await authAPI.sendCode(phone.replace(/\s/g, ""));
@@ -118,7 +122,6 @@ export default function LoginPage({ onLogin }) {
         setLoading(false);
       }
     } else {
-      // Register: to'g'ridan-to'g'ri yuborish (bot orqali kelgan)
       setStep(2);
     }
   };
@@ -135,7 +138,6 @@ export default function LoginPage({ onLogin }) {
         setError("Telefon raqam faqat o'zingizniki bo'lishi kerak");
         return;
       }
-      // Ro'yxatdan o'tish — kod talab etilmaydi (bot orqali kelgan)
       setLoading(true);
       try {
         const data = await authAPI.register({
@@ -153,7 +155,6 @@ export default function LoginPage({ onLogin }) {
       return;
     }
 
-    // Login — OTP tekshirish
     if (code.trim().length !== 6) { setError("6 xonali kod kiriting"); return; }
     setLoading(true);
     try {
@@ -177,24 +178,23 @@ export default function LoginPage({ onLogin }) {
       display: "flex", flexDirection: "column",
       alignItems: "center", justifyContent: "center", padding: "40px 28px",
     }}>
-      {/* Telegram token orqali yuklanayotgan bo'lsa */}
-      {loading && !step && (
+      {loading && step === 1 && !phone && (
         <div style={{ textAlign: "center", color: C.textMuted }}>
-          <Loader2 size={32} className="spin" style={{ margin: "0 auto 12px" }} />
+          <Loader2 size={32} color={C.primaryDark} style={{ margin: "0 auto 12px", display:"block", animation:"spin 1s linear infinite" }} />
           <div style={{ fontSize: 14 }}>Telegram orqali kirilmoqda...</div>
+          <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
         </div>
       )}
 
-      {/* Logo */}
       <div style={{ marginBottom: 16 }}>
         <Logo size={80} />
       </div>
-      <div style={{ fontSize: 28, fontWeight: 900, color: C.text, marginBottom: 4 }}>ReMarket</div>
+      <div style={{ fontSize: 28, fontWeight: 900, color: C.text, marginBottom: 4 }}>ReQurilish</div>
       <div style={{ fontSize: 13, color: C.textMuted, marginBottom: 32, textAlign: "center" }}>
-        Qayta ishlangan qurilish materiallari bozori
+        Qurilish materiallari bozori
       </div>
 
-      {/* Step 1 — Telefon */}
+      {/* Step 1 */}
       {step === 1 && (
         <div style={{ width:"100%", background:C.card, borderRadius:22,
                       border:`1px solid ${C.border}`, padding:"24px 20px",
@@ -211,35 +211,47 @@ export default function LoginPage({ onLogin }) {
           </div>
 
           {mode === "register" && (
-            <><Lbl>Ism Familiya *</Lbl><TInput value={name} onChange={setName} placeholder="Abdulloh Karimov" /></>
+            <>
+              <Lbl>Ism Familiya *</Lbl>
+              <TInput value={name} onChange={setName} placeholder="Abdulloh Karimov" />
+            </>
           )}
           <Lbl>Telefon raqam *</Lbl>
-          <PhoneInput value={phone} onChange={setPhone} onEnter={handleNextStep} />
+          <PhoneInput
+            value={phone} onChange={setPhone} onEnter={handleNextStep}
+            locked={!!originPhone}
+          />
           {mode === "register" && (
             <>
               <Lbl>Telegram username *</Lbl>
-              <TInput
-                value={telegram}
-                onChange={setTelegram}
-                placeholder="@username"
-              />
+              {tgLocked ? (
+                <div style={{ display:"flex", alignItems:"center", gap:8, padding:"10px 13px",
+                              borderRadius:12, border:`1.5px solid ${C.border}`,
+                              background:"#F9FAFB", marginBottom:13, fontSize:14, color:C.text }}>
+                  <Lock size={14} color={C.textMuted} />
+                  <span style={{ flex:1 }}>{telegram}</span>
+                </div>
+              ) : (
+                <TInput value={telegram} onChange={setTelegram} placeholder="@username" />
+              )}
             </>
           )}
 
           {error && <ErrorBox msg={error} />}
 
-          <BtnPrimary onClick={handleNextStep} fullWidth>
-            <Smartphone size={15} /> Kod yuborish →
+          <BtnPrimary onClick={handleNextStep} fullWidth disabled={loading}>
+            {loading
+              ? <><Loader2 size={15} style={{ animation:"spin 1s linear infinite" }} /> Tekshirilmoqda...</>
+              : <><Smartphone size={15} /> {mode === "login" ? "Kod yuborish →" : "Davom etish →"}</>
+            }
           </BtnPrimary>
 
-          {/* Ajratuvchi */}
           <div style={{ display:"flex", alignItems:"center", gap:10, margin:"16px 0 14px" }}>
             <div style={{ flex:1, height:1, background:C.border }} />
             <span style={{ fontSize:11, color:C.textMuted, whiteSpace:"nowrap" }}>yoki</span>
             <div style={{ flex:1, height:1, background:C.border }} />
           </div>
 
-          {/* Telegram orqali kirish */}
           <a href={BOT_URL} target="_blank" rel="noreferrer" style={{ textDecoration:"none" }}>
             <button style={{
               width:"100%", display:"flex", alignItems:"center", justifyContent:"center", gap:8,
@@ -271,7 +283,7 @@ export default function LoginPage({ onLogin }) {
         </div>
       )}
 
-      {/* Step 2 — Tasdiqlash */}
+      {/* Step 2 */}
       {step === 2 && (
         <div style={{ width:"100%", background:C.card, borderRadius:22,
                       border:`1px solid ${C.border}`, padding:"24px 20px",
@@ -285,7 +297,6 @@ export default function LoginPage({ onLogin }) {
           </button>
 
           {mode === "login" ? (
-            /* LOGIN — Telegram OTP */
             <>
               <div style={{ textAlign:"center", marginBottom:24 }}>
                 <div style={{ width:60, height:60, borderRadius:18, margin:"0 auto 14px",
@@ -311,15 +322,13 @@ export default function LoginPage({ onLogin }) {
                          border:`2.5px solid ${code.length>=6?C.primaryDark:C.primaryBorder}`,
                          background:C.bg, fontSize:32, fontWeight:900, letterSpacing:10,
                          textAlign:"center", color:C.text, outline:"none", fontFamily:"inherit", transition:"border-color .2s" }}
-                onFocus={e => e.target.style.borderColor=C.primaryDark}
-                onBlur={e  => e.target.style.borderColor=code.length>=6?C.primaryDark:C.primaryBorder}
                 onKeyDown={e => e.key==="Enter" && handleSubmit()}
               />
 
               {error && <ErrorBox msg={error} />}
 
-              <BtnPrimary onClick={handleSubmit} fullWidth>
-                {loading ? <><Loader2 size={15} className="spin" /> Tekshirilmoqda...</>
+              <BtnPrimary onClick={handleSubmit} fullWidth disabled={loading}>
+                {loading ? <><Loader2 size={15} style={{ animation:"spin 1s linear infinite" }} /> Tekshirilmoqda...</>
                          : <><KeyRound size={15} /> Kirish</>}
               </BtnPrimary>
 
@@ -332,7 +341,6 @@ export default function LoginPage({ onLogin }) {
               </div>
             </>
           ) : (
-            /* REGISTER — tasdiqlash (bot orqali kelgan, kod talab etilmaydi) */
             <>
               <div style={{ textAlign:"center", marginBottom:20 }}>
                 <div style={{ width:60, height:60, borderRadius:18, margin:"0 auto 14px",
@@ -355,19 +363,20 @@ export default function LoginPage({ onLogin }) {
 
               {error && <ErrorBox msg={error} />}
 
-              <BtnPrimary onClick={handleSubmit} fullWidth>
-                {loading ? <><Loader2 size={15} className="spin" /> Yuklanmoqda...</>
+              <BtnPrimary onClick={handleSubmit} fullWidth disabled={loading}>
+                {loading ? <><Loader2 size={15} style={{ animation:"spin 1s linear infinite" }} /> Yuklanmoqda...</>
                          : <><CheckCircle size={15} /> Ro'yxatdan o'tish</>}
               </BtnPrimary>
             </>
           )}
         </div>
       )}
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
     </div>
   );
 }
 
-function PhoneInput({ value, onChange, onEnter }) {
+function PhoneInput({ value, onChange, onEnter, locked }) {
   const [focus, setFocus] = useState(false);
   return (
     <div style={{ position:"relative", marginBottom:13 }}>
@@ -375,14 +384,21 @@ function PhoneInput({ value, onChange, onEnter }) {
                      fontSize:13, color:C.textSub, fontWeight:700, userSelect:"none", pointerEvents:"none" }}>
         +998
       </span>
-      <input value={value} inputMode="numeric" placeholder="90 000 00 00"
-        onChange={e => onChange(formatPhone(e.target.value))}
-        onKeyDown={e => e.key==="Enter" && onEnter?.()}
-        onFocus={() => setFocus(true)} onBlur={() => setFocus(false)}
+      {locked && (
+        <Lock size={13} color={C.textMuted} style={{ position:"absolute", right:12, top:"50%",
+                                                      transform:"translateY(-50%)", pointerEvents:"none" }} />
+      )}
+      <input
+        value={value} inputMode="numeric" placeholder="90 000 00 00"
+        readOnly={locked}
+        onChange={locked ? undefined : e => onChange(formatPhone(e.target.value))}
+        onKeyDown={locked ? undefined : e => e.key==="Enter" && onEnter?.()}
+        onFocus={() => !locked && setFocus(true)} onBlur={() => setFocus(false)}
         style={{ width:"100%", boxSizing:"border-box", padding:"10px 13px 10px 54px",
                  borderRadius:12, border:`1.5px solid ${focus?C.primary:C.border}`,
                  fontSize:15, fontWeight:400, color:C.text, fontFamily:"inherit", outline:"none",
-                 background:C.bg, transition:"border-color 0.2s", letterSpacing:1 }}
+                 background: locked ? "#F9FAFB" : C.bg, transition:"border-color 0.2s",
+                 letterSpacing:1, cursor: locked ? "default" : "text" }}
       />
     </div>
   );
