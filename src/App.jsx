@@ -3,8 +3,18 @@ import LoginPage from "./pages/LoginPage";
 import HomePage from "./pages/HomePage";
 import ProfilePage from "./pages/ProfilePage";
 import PaymentPage from "./pages/PaymentPage";
+import OperatorPage from "./pages/OperatorPage";
 import { C } from "./constants";
 import { getToken, clearAuth, productsAPI, offersAPI, authAPI } from "./services/api";
+import { Home, Plus, Loader2 } from "lucide-react";
+
+const OPERATOR_PHONES = ["331350206"];
+const phoneCore = (value) => {
+  const digits = String(value || "").replace(/\D/g, "");
+  if (!digits) return "";
+  return digits.startsWith("998") ? digits.slice(-9) : digits.slice(-9);
+};
+const isOperator = (user) => user && OPERATOR_PHONES.includes(phoneCore(user.phone));
 
 // Saved user from localStorage (for instant load without flicker)
 const savedUser = () => {
@@ -12,14 +22,21 @@ const savedUser = () => {
   catch { return null; }
 };
 
+function hasTgParams() {
+  const p = new URLSearchParams(window.location.search);
+  // register=1 bo'lsa ham mehmon rejimda postlarni ko'rish mumkin bo'lsin.
+  return p.has("tgToken");
+}
+
 export default function App() {
   const [user,       setUser]       = useState(savedUser);
-  const [nav,        setNav]        = useState("home"); // home | login | profile | payment
+  const [nav,        setNav]        = useState(hasTgParams() ? "login" : "home");
   const [products,   setProducts]   = useState([]);
   const [myProducts, setMyProducts] = useState([]);
   const [offers,     setOffers]     = useState([]);
   const [homeAction, setHomeAction] = useState(null);
   const [loading,    setLoading]    = useState(!!savedUser());
+  const [offline,    setOffline]    = useState(false);
 
   const loggedIn = !!user && !!getToken();
   const guestUser = user || { id: null, name: "Mehmon", phone: "", telegram: "", avatar: null };
@@ -47,6 +64,7 @@ export default function App() {
   const loadData = async () => {
     try {
       const prods = await productsAPI.getAll();
+      setOffline(false);
       setProducts(prods);
 
       if (getToken()) {
@@ -60,7 +78,9 @@ export default function App() {
         setMyProducts([]);
         setOffers([]);
       }
-    } catch { /* silent */ }
+    } catch (e) {
+      if (e.offline) setOffline(true);
+    }
   };
 
   const handleLogin = async (userData) => {
@@ -133,7 +153,9 @@ export default function App() {
       {/* Bosh sahifa */}
       <div onClick={() => setNav("home")}
         style={{ flex:1, textAlign:"center", cursor:"pointer" }}>
-        <div style={{ fontSize:22, lineHeight:1 }}>🏠</div>
+        <div style={{ display:"flex", justifyContent:"center" }}>
+          <Home size={22} color={nav==="home" ? C.primaryDark : C.textMuted} />
+        </div>
         <div style={{ fontSize:9, marginTop:3,
           color: nav==="home" ? C.primaryDark : C.textMuted,
           fontWeight: nav==="home" ? 800 : 400 }}>Bosh</div>
@@ -146,19 +168,11 @@ export default function App() {
         <div style={{ width:52, height:52, borderRadius:17,
                       background:`linear-gradient(135deg,${C.primary},${C.primaryDark})`,
                       display:"flex", alignItems:"center", justifyContent:"center",
-                      fontSize:24, marginTop:-24,
-                      boxShadow:`0 6px 20px rgba(255,179,128,0.6)`,
-                      border:"3px solid white" }}>➕</div>
+                      marginTop:-24, boxShadow:`0 6px 20px rgba(255,179,128,0.6)`,
+                      border:"3px solid white" }}>
+          <Plus size={26} color="white" strokeWidth={2.5} />
+        </div>
         <div style={{ fontSize:9, marginTop:4, color:C.textMuted, fontWeight:400 }}>E'lon</div>
-      </div>
-
-      {/* 💳 To'lovlar */}
-      <div onClick={() => setNav("payment")}
-        style={{ flex:1, textAlign:"center", cursor:"pointer" }}>
-        <div style={{ fontSize:22, lineHeight:1 }}>💳</div>
-        <div style={{ fontSize:9, marginTop:3,
-          color: nav==="payment" ? C.primaryDark : C.textMuted,
-          fontWeight: nav==="payment" ? 800 : 400 }}>To'lov</div>
       </div>
 
       {/* 👤 Profil */}
@@ -167,7 +181,7 @@ export default function App() {
         <div style={{ width:30, height:30, borderRadius:"50%", margin:"0 auto",
                       overflow:"hidden",
                       border:`2.5px solid ${nav==="profile" ? C.primaryDark : C.border}`,
-                      background:`linear-gradient(135deg,${C.primary},${C.primaryDark})`,
+                      background: user.avatar ? "transparent" : `linear-gradient(135deg,${C.primary},${C.primaryDark})`,
                       display:"flex", alignItems:"center", justifyContent:"center" }}>
           {user.avatar
             ? <img src={user.avatar} alt="av" style={{ width:"100%", height:"100%", objectFit:"cover" }} />
@@ -185,6 +199,29 @@ export default function App() {
 
   return (
     <div style={{ fontFamily:"'Nunito','Segoe UI',sans-serif", background:C.bg }}>
+      {/* Server offline banner */}
+      {offline && (
+        <div style={{ position:"fixed", top:0, left:"50%", transform:"translateX(-50%)",
+                      width:"100%", maxWidth:430, zIndex:999,
+                      background:"#EF4444", color:"white",
+                      padding:"10px 16px", display:"flex", alignItems:"center",
+                      justifyContent:"space-between", gap:10, boxSizing:"border-box",
+                      boxShadow:"0 2px 12px rgba(239,68,68,0.4)" }}>
+          <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+            <span style={{ fontSize:16 }}>🔴</span>
+            <div>
+              <div style={{ fontSize:12, fontWeight:800 }}>Server ishlamayapti</div>
+              <div style={{ fontSize:10, opacity:0.85 }}>Backend server yoqilmagan yoki ulanish yo'q</div>
+            </div>
+          </div>
+          <button onClick={loadData}
+            style={{ background:"rgba(255,255,255,0.2)", border:"none", color:"white",
+                     borderRadius:8, padding:"5px 10px", fontSize:11, fontWeight:700,
+                     cursor:"pointer", whiteSpace:"nowrap" }}>
+            Qayta urinish
+          </button>
+        </div>
+      )}
       {!loggedIn && nav === "home" && (
         <HomePage
           user={guestUser}
@@ -205,6 +242,10 @@ export default function App() {
         <LoginPage onLogin={handleLogin} />
       )}
 
+      {loggedIn && nav === "operator" && (
+        <OperatorPage onBack={() => setNav("profile")} />
+      )}
+
       {loggedIn && nav === "profile" && (
         <>
           <ProfilePage
@@ -213,19 +254,14 @@ export default function App() {
             myProducts={myProducts}
             onDelete={handleDeleteProduct}
             onLogout={handleLogout}
+            isOperator={isOperator(user)}
+            onOpenOperator={() => setNav("operator")}
           />
           <BottomNav />
         </>
       )}
 
-      {loggedIn && nav === "payment" && (
-        <>
-          <PaymentPage user={user} />
-          <BottomNav />
-        </>
-      )}
-
-      {loggedIn && (nav === "home" || (nav !== "profile" && nav !== "payment")) && (
+      {loggedIn && (nav === "home" || (nav !== "profile")) && (
         <>
           <HomePage
             user={user}
@@ -237,6 +273,8 @@ export default function App() {
             homeAction={homeAction}
             setHomeAction={setHomeAction}
             onProductAdded={handleAddProduct}
+            onDelete={handleDeleteProduct}
+            isOperator={isOperator(user)}
             loggedIn={true}
             onRequireAuth={() => setNav("login")}
           />

@@ -1,29 +1,11 @@
-# Dependencies
 node_modules/
-*/node_modules/
-
-# Build outputs
 dist/
-*/dist/
-
-# Environment variables — HECH QACHON git ga push qilmang!
+dist-ssr/
 .env
-*/.env
-*.env.local
-
-# Logs
+.env.local
+*.local
 *.log
-npm-debug.log*
-
-# OS files
 .DS_Store
-Thumbs.db
-
-# Editor
-.vscode/
-.idea/
-
-.vercel
-
-# ngrok tunnel URL (avtomatik yaratiladi)
-.ngrok-url
+.vscode/*
+!.vscode/extensions.json
+ReMarketFrontend/

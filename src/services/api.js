@@ -1,7 +1,4 @@
-// Productionda API URL normalize:
-// - VITE_API_URL=https://host         -> https://host/api
-// - VITE_API_URL=https://host/api     -> https://host/api
-// - env bo'lmasa production fallback  -> https://backend-a5zy.onrender.com/api
+// Production da VITE_API_URL bo'lmasa ham backend URL fallback ishlaydi.
 const PROD_API_FALLBACK = "https://backend-a5zy.onrender.com";
 const RAW_BASE = import.meta.env.VITE_API_URL
   || (import.meta.env.PROD ? PROD_API_FALLBACK : "");
@@ -20,6 +17,7 @@ const headers = (extra = {}) => ({
   ...extra,
 });
 
+// Tarmoq xatosini (ECONNREFUSED, offline) ushlash
 const apiFetch = (url, opts) =>
   fetch(url, opts).catch(() => {
     const err = new Error("SERVER_OFFLINE");
@@ -35,7 +33,7 @@ const handle = async (res) => {
 
 // ─── AUTH ─────────────────────────────────────────────────────────
 export const authAPI = {
-  // Telegram botga OTP kod yuborish
+  // Telefon raqamga kod yuborish (console.log da ko'rinadi)
   sendCode: (phone) =>
     apiFetch(`${BASE}/auth/send-code`, { method: "POST", headers: headers(), body: JSON.stringify({ phone }) }).then(handle),
 
@@ -45,15 +43,50 @@ export const authAPI = {
   login: (body) =>
     apiFetch(`${BASE}/auth/login`, { method: "POST", headers: headers(), body: JSON.stringify(body) }).then(handle),
 
-  // Bot yuborgan 1-martalik token bilan avtomatik login
-  loginWithTgToken: (token) =>
-    apiFetch(`${BASE}/auth/tg-token/${encodeURIComponent(token)}`, { headers: headers() }).then(handle),
-
   me: () =>
     apiFetch(`${BASE}/auth/me`, { headers: headers() }).then(handle),
 
   updateMe: (body) =>
     apiFetch(`${BASE}/auth/me`, { method: "PUT", headers: headers(), body: JSON.stringify(body) }).then(handle),
+
+  // Telegram bot yuborgan 1 martalik token orqali kirish
+  loginWithTgToken: (token) =>
+    apiFetch(`${BASE}/auth/tg-token/${token}`, { headers: headers() }).then(handle),
+};
+
+// ─── OPERATOR ─────────────────────────────────────────────────────
+export const operatorAPI = {
+  getUsers: (q = "") =>
+    apiFetch(`${BASE}/operator/users${q ? "?q=" + encodeURIComponent(q) : ""}`, { headers: headers() }).then(handle),
+
+  deleteUser: (id) =>
+    apiFetch(`${BASE}/operator/users/${id}`, { method: "DELETE", headers: headers() }).then(handle),
+
+  setUserBlocked: (id, blocked) =>
+    apiFetch(`${BASE}/operator/users/${id}/block`, {
+      method: "PUT",
+      headers: headers(),
+      body: JSON.stringify({ blocked }),
+    }).then(handle),
+
+  deposit: (phone, amount) =>
+    apiFetch(`${BASE}/operator/deposit`, { method: "POST", headers: headers(), body: JSON.stringify({ phone, amount }) }).then(handle),
+
+  withdraw: (phone, amount) =>
+    apiFetch(`${BASE}/operator/withdraw`, { method: "POST", headers: headers(), body: JSON.stringify({ phone, amount }) }).then(handle),
+
+  getProducts: (q = "") =>
+    apiFetch(`${BASE}/operator/products${q ? "?q=" + encodeURIComponent(q) : ""}`, { headers: headers() }).then(handle),
+
+  deleteProduct: (id) =>
+    apiFetch(`${BASE}/operator/products/${id}`, { method: "DELETE", headers: headers() }).then(handle),
+
+  setProductActive: (id, is_active) =>
+    apiFetch(`${BASE}/operator/products/${id}/toggle`, {
+      method: "PUT",
+      headers: headers(),
+      body: JSON.stringify({ is_active }),
+    }).then(handle),
 };
 
 // ─── PRODUCTS ─────────────────────────────────────────────────────
@@ -78,6 +111,13 @@ export const productsAPI = {
 
   remove: (id) =>
     apiFetch(`${BASE}/products/${id}`, { method: "DELETE", headers: headers() }).then(handle),
+
+  updatePostStatus: (id, status) =>
+    apiFetch(`${BASE}/products/${id}/payment-status`, { 
+      method: "PUT", 
+      headers: headers(), 
+      body: JSON.stringify({ status }) 
+    }).then(handle),
 };
 
 // ─── OFFERS ───────────────────────────────────────────────────────
