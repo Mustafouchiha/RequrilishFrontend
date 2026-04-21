@@ -112,7 +112,7 @@ export default function App() {
 
   // Real-time polling: 10s interval
   useEffect(() => {
-    pollRef.current = setInterval(loadData, 10_000);
+    pollRef.current = setInterval(loadData, 3_000);
     return () => clearInterval(pollRef.current);
   }, []);
 

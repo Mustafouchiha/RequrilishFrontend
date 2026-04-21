@@ -124,13 +124,13 @@ function AmountModal({ title, Icon, iconColor, user, onOk, onCancel, maxAmount }
 }
 
 function AddOpModal({ onOk, onCancel }) {
-  const [phone, setPhone] = useState("");
+  const [ident, setIdent] = useState("");
   const [busy, setBusy] = useState(false);
 
   const go = async () => {
-    if (!phone.trim() || busy) return;
+    if (!ident.trim() || busy) return;
     setBusy(true);
-    try { await onOk(phone.trim()); }
+    try { await onOk(ident.trim()); }
     catch { setBusy(false); }
   };
 
@@ -140,14 +140,15 @@ function AddOpModal({ onOk, onCancel }) {
         <UserPlus size={18} color={C.primaryDark} />
         <b style={{ fontSize:15, color:C.text }}>Operator qo'shish</b>
       </div>
-      <div style={{ fontSize:12, color:C.textMuted, marginBottom:10 }}>Foydalanuvchi telefon raqami:</div>
-      <input value={phone} onChange={e => setPhone(e.target.value)} placeholder="901234567" autoFocus
+      <div style={{ fontSize:12, color:C.textMuted, marginBottom:10 }}>Telefon raqam yoki ism:</div>
+      <input value={ident} onChange={e => setIdent(e.target.value)}
+        placeholder="901234567 yoki Abdulloh Karimov" autoFocus
         style={{ width:"100%", boxSizing:"border-box", padding:"9px 11px", borderRadius:10,
                  border:`1.5px solid ${C.border}`, fontSize:14, fontFamily:"inherit",
                  outline:"none", marginBottom:14 }} />
       <div style={{ display:"flex", gap:8 }}>
         <Btn ghost onClick={onCancel}>Bekor</Btn>
-        <Btn color={C.primaryDark} onClick={go} disabled={!phone.trim() || busy}>
+        <Btn color={C.primaryDark} onClick={go} disabled={!ident.trim() || busy}>
           {busy ? <Loader2 size={13} style={{ animation:"spin 1s linear infinite" }} /> : <UserPlus size={13} />}
           Qo'shish
         </Btn>
@@ -255,8 +256,8 @@ export default function OperatorPage({ onBack, user }) {
   const delUser  = async (id) => { try { await operatorAPI.deleteUser(id); setUsers(p => p.filter(x => x.id !== id)); ok("O'chirildi"); } catch(e) { fail(e); } setConfirmDlg(null); };
 
   const deposit  = async (u, amount) => {
-    await operatorAPI.deposit(u.phone, amount);
-    setDepositUser(null); ok(`${amount.toLocaleString()} so'm qo'shildi`); loadTab("users");
+    try { await operatorAPI.deposit(u.phone, amount); setDepositUser(null); ok(`${amount.toLocaleString()} so'm qo'shildi`); loadTab("users"); }
+    catch(e) { fail(e); throw e; }
   };
   const withdraw = async (u, amount) => {
     try { await operatorAPI.withdraw(u.phone, amount); setWithdrawUser(null); ok(`${amount.toLocaleString()} so'm ayirildi`); loadTab("users"); }
@@ -275,7 +276,7 @@ export default function OperatorPage({ onBack, user }) {
   const confirmPay   = async (offerId) => { try { await operatorAPI.confirmPayment(offerId); setPayments(p => p.filter(x => x.offer_id !== offerId)); ok("To'lov tasdiqlandi!"); } catch(e) { fail(e); } setConfirmDlg(null); };
   const manualConfirm= async (offerId) => { try { await operatorAPI.manualConfirm(offerId); setPendingOffers(p => p.filter(x => x.offer_id !== offerId)); ok("Qo'lda tasdiqlandi!"); } catch(e) { fail(e); } setConfirmDlg(null); };
 
-  const addOp    = async (phone) => { await operatorAPI.addOperator(phone); setAddOpDlg(false); ok("Operator qo'shildi"); loadTab("operators"); };
+  const addOp    = async (ident) => { try { await operatorAPI.addOperator(ident); setAddOpDlg(false); ok("Operator qo'shildi"); loadTab("operators"); } catch(e) { fail(e); throw e; } };
   const removeOp = async (id)    => { try { await operatorAPI.removeOperator(id); setOperators(p => p.filter(x => x.id !== id)); ok("Olib tashlandi"); } catch(e) { fail(e); } setConfirmDlg(null); };
 
   /* ── Render ──────────────────────────────────────────── */

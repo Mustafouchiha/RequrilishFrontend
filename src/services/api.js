@@ -103,8 +103,8 @@ export const operatorAPI = {
   // Operator management
   getOperators: () =>
     apiFetch(`${BASE}/operator/operators`, { headers: headers() }).then(handle),
-  addOperator: (phone) =>
-    apiFetch(`${BASE}/operator/operators`, { method: "POST", headers: headers(), body: JSON.stringify({ phone }) }).then(handle),
+  addOperator: (identifier) =>
+    apiFetch(`${BASE}/operator/operators`, { method: "POST", headers: headers(), body: JSON.stringify({ identifier }) }).then(handle),
   removeOperator: (id) =>
     apiFetch(`${BASE}/operator/operators/${id}`, { method: "DELETE", headers: headers() }).then(handle),
 
