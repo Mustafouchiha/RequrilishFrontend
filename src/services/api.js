@@ -92,6 +92,11 @@ export const operatorAPI = {
   getStats: () =>
     apiFetch(`${BASE}/operator/stats`, { headers: headers() }).then(handle),
 
+  getPendingOffers: () =>
+    apiFetch(`${BASE}/operator/pending-offers`, { headers: headers() }).then(handle),
+  manualConfirm: (offerId) =>
+    apiFetch(`${BASE}/operator/manual-confirm/${offerId}`, { method: "POST", headers: headers() }).then(handle),
+
   withdraw: (phone, amount) =>
     apiFetch(`${BASE}/operator/withdraw`, { method: "POST", headers: headers(), body: JSON.stringify({ phone, amount }) }).then(handle),
 

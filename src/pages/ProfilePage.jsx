@@ -205,7 +205,8 @@ export default function ProfilePage({ user, setUser, myProducts, onDelete, onLog
           <Package size={16} color={C.primaryDark} /> Mening e'lonlarim
         </div>
 
-        {myProducts.length === 0 ? (
+        {/* Hide self-deleted products; still show operator-rejected ones */}
+        {myProducts.filter(p => p.status !== "deleted" || p.rejectedReason).length === 0 ? (
           <div style={{ textAlign:"center", padding:"32px 20px", color:C.textMuted,
                         background:C.card, borderRadius:16, border:`1px solid ${C.border}` }}>
             <div style={{ display:"flex", justifyContent:"center", marginBottom:8 }}>
@@ -215,7 +216,9 @@ export default function ProfilePage({ user, setUser, myProducts, onDelete, onLog
             <div style={{ fontSize:11, marginTop:3 }}>E'lon qo'shish uchun + tugmasini bosing</div>
           </div>
         ) : (
-          myProducts.map(p => {
+          myProducts
+            .filter(p => p.status !== "deleted" || p.rejectedReason)
+            .map(p => {
             const cc = COND[p.condition] || COND["Yaxshi"];
             return (
               <div key={p.id}
@@ -246,14 +249,16 @@ export default function ProfilePage({ user, setUser, myProducts, onDelete, onLog
                     <StatusBadge status={p.status || "approved"} rejectReason={p.rejectReason} />
                   </div>
                 </div>
-                <div style={{ display:"flex", alignItems:"center", padding:"0 12px" }}>
-                  <button onClick={() => onDelete(p.id)}
-                    style={{ width:34, height:34, borderRadius:10, border:"none",
-                             background:C.dangerLight, color:C.danger,
-                             cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>
-                    <Trash2 size={16} />
-                  </button>
-                </div>
+                {p.status !== "deleted" && (
+                  <div style={{ display:"flex", alignItems:"center", padding:"0 12px" }}>
+                    <button onClick={() => onDelete(p.id)}
+                      style={{ width:34, height:34, borderRadius:10, border:"none",
+                               background:C.dangerLight, color:C.danger,
+                               cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                )}
               </div>
             );
           })

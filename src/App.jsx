@@ -156,8 +156,11 @@ export default function App() {
   const handleDeleteProduct = async (id) => {
     try {
       await productsAPI.remove(id);
-      setMyProducts(prev => prev.filter(p => p.id !== id));
-    } catch { /* silent */ }
+      // Mark deleted locally; ProfilePage filter will hide it
+      setMyProducts(prev => prev.map(p => p.id === id ? { ...p, status: "deleted" } : p));
+    } catch (e) {
+      console.error("Delete failed:", e.message);
+    }
   };
 
   const handleUpdateUser = (updated) => {
