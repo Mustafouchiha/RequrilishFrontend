@@ -27,7 +27,11 @@ const apiFetch = (url, opts) =>
 
 const handle = async (res) => {
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message || "Xatolik yuz berdi");
+  if (!res.ok) {
+    const err = new Error(data.message || "Xatolik yuz berdi");
+    if (data.needBot) err.needBot = true;
+    throw err;
+  }
   return data;
 };
 
@@ -45,6 +49,8 @@ export const authAPI = {
     apiFetch(`${BASE}/auth/me`, { method: "PUT", headers: headers(), body: JSON.stringify(body) }).then(handle),
   loginWithTgToken: (token) =>
     apiFetch(`${BASE}/auth/tg-token/${token}`, { headers: headers() }).then(handle),
+  tgInit: (initData) =>
+    apiFetch(`${BASE}/auth/tg-init`, { method: "POST", headers: headers(), body: JSON.stringify({ initData }) }).then(handle),
 };
 
 // ─── OPERATOR ─────────────────────────────────────────────────────
@@ -152,6 +158,8 @@ export const paymentsAPI = {
     apiFetch(`${BASE}/payments`, { method: "POST", headers: headers(), body: JSON.stringify(body) }).then(handle),
   confirm: (offerId) =>
     apiFetch(`${BASE}/payments/${offerId}/confirm`, { method: "PUT", headers: headers() }).then(handle),
+  balancePay: (offerId) =>
+    apiFetch(`${BASE}/payments/balance-pay`, { method: "POST", headers: headers(), body: JSON.stringify({ offerId }) }).then(handle),
   my: () =>
     apiFetch(`${BASE}/payments/my`, { headers: headers() }).then(handle),
   info: () =>

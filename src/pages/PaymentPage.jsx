@@ -11,7 +11,6 @@ import {
   Phone,
   Wallet,
   History,
-  Package,
   FileText,
 } from "lucide-react";
 
@@ -52,8 +51,6 @@ export default function PaymentPage({ user }) {
   const [opCard,     setOpCard] = useState({ card: "...", name: "..." });
   const [loading,    setLoading]= useState(true);
   const [modal,      setModal]  = useState(null); // { offer } yoki null
-  const [cardFrom,   setCardFrom] = useState("");
-  const [note,       setNote]   = useState("");
   const [submitting, setSub]    = useState(false);
   const [toast,      setToast]  = useState(null);
 
@@ -82,28 +79,14 @@ export default function PaymentPage({ user }) {
 
   useEffect(() => { load(); }, [load]);
 
-  // ── To'lovni tasdiqlash (seller) — bu endi modal-submit ichida avtomatik bo'ladi ──
-  const confirmPayment = async (offerId) => {
-    try {
-      await paymentsAPI.confirm(offerId);
-      showToast("To'lov tasdiqlandi ✅");
-      await load();
-    } catch (e) {
-      showToast(e.message, false);
-    }
-  };
-
-  // ── To'lovni yuborish (buyer modal) ──────────────────────────────
+  // ── Balansdan 5% to'lash (seller modal) ─────────────────────────
   const submitPayment = async () => {
     if (!modal) return;
     setSub(true);
     try {
-      await paymentsAPI.send({ offerId: modal.id, cardFrom, note });
-      // Seller 5% to'lovni yuborganidan keyin darhol tasdiqlaydi:
-      await paymentsAPI.confirm(modal.id);
-      showToast("To'lov tasdiqlandi ✅");
+      await paymentsAPI.balancePay(modal.id);
+      showToast("To'lov muvaffaqiyatli amalga oshirildi ✅");
       setModal(null);
-      setCardFrom(""); setNote("");
       await load();
     } catch (e) {
       showToast(e.message, false);
@@ -287,7 +270,7 @@ export default function PaymentPage({ user }) {
                     {Math.round(o.productPrice * 0.05).toLocaleString()} so'm (5% fee)
                   </div>
                   <button
-                    onClick={() => { setModal(o); setCardFrom(""); setNote(""); }}
+                    onClick={() => setModal(o)}
                     style={{
                       marginTop: 10, width: "100%",
                       background: `linear-gradient(135deg,${C.primary},${C.primaryDark})`,
@@ -390,66 +373,31 @@ export default function PaymentPage({ user }) {
               <div style={{ width: 40, height: 4, borderRadius: 2, background: C.border, margin: "0 auto 14px" }} />
               <div style={{ fontSize: 17, fontWeight: 900, color: C.text }}>To'lovni yuborish va tasdiqlash</div>
               <div style={{ fontSize: 13, color: C.textSub, marginTop: 4 }}>
-                {modal.productName} — Xizmat haqi (5%):{" "}
-                <b style={{ color: C.primaryDark }}>
-                  {Math.round(modal.productPrice * 0.05).toLocaleString()} so'm
-                </b>
+                {modal.productName}
               </div>
             </div>
 
-            {/* Operator karta */}
+            {/* Fee va balans */}
             <div style={{
               background: C.primaryLight, borderRadius: 14,
-              padding: "14px 16px", marginBottom: 16, border: `1px solid ${C.primaryBorder}`,
+              padding: "16px", marginBottom: 20, border: `1px solid ${C.primaryBorder}`,
             }}>
-              <div style={{ fontSize: 12, color: C.textSub, marginBottom: 4 }}>Quyidagi kartaga o'tkazing:</div>
-              <div style={{ fontSize: 18, fontWeight: 900, color: C.primaryDark, letterSpacing: 1 }}>
-                {fmtCard(opCard.card)}
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 10 }}>
+                <span style={{ fontSize: 13, color: C.textSub }}>Xizmat haqi (5%)</span>
+                <span style={{ fontSize: 15, fontWeight: 900, color: C.primaryDark }}>
+                  {Math.max(1, Math.round(modal.productPrice * 0.05)).toLocaleString()} so'm
+                </span>
               </div>
-              <div style={{ fontSize: 12, color: C.textSub }}>{opCard.name}</div>
-              <button onClick={() => copy(opCard.card)} style={{
-                marginTop: 8, background: C.primaryDark, border: "none",
-                borderRadius: 8, color: "#fff", padding: "6px 14px",
-                fontSize: 12, fontWeight: 700, cursor: "pointer",
-                display: "inline-flex", alignItems: "center", gap: 6,
-              }}>
-                <Copy size={13} /> Nusxalash
-              </button>
-            </div>
-
-            {/* Karta ma'lumotlari */}
-            <div style={{ marginBottom: 12 }}>
-              <label style={{ fontSize: 12, color: C.textSub, fontWeight: 700, display: "block", marginBottom: 6 }}>
-                Sizning karta raqamingiz (ixtiyoriy)
-              </label>
-              <input
-                value={cardFrom}
-                onChange={e => setCardFrom(e.target.value)}
-                placeholder="8600 0000 0000 0000"
-                maxLength={19}
-                style={{
-                  width: "100%", boxSizing: "border-box", border: `1.5px solid ${C.border}`,
-                  borderRadius: 12, padding: "10px 14px", fontSize: 14, outline: "none",
-                  fontFamily: "monospace",
-                }}
-              />
-            </div>
-
-            <div style={{ marginBottom: 18 }}>
-              <label style={{ fontSize: 12, color: C.textSub, fontWeight: 700, display: "block", marginBottom: 6 }}>
-                Izoh (ixtiyoriy)
-              </label>
-              <textarea
-                value={note}
-                onChange={e => setNote(e.target.value)}
-                placeholder="To'lov haqida qo'shimcha ma'lumot..."
-                rows={2}
-                style={{
-                  width: "100%", boxSizing: "border-box", border: `1.5px solid ${C.border}`,
-                  borderRadius: 12, padding: "10px 14px", fontSize: 13,
-                  resize: "none", outline: "none",
-                }}
-              />
+              <div style={{ display: "flex", justifyContent: "space-between" }}>
+                <span style={{ fontSize: 13, color: C.textSub }}>Hisobingizdagi balans</span>
+                <span style={{
+                  fontSize: 15, fontWeight: 900,
+                  color: Number(user?.balance || 0) >= Math.max(1, Math.round(modal.productPrice * 0.05))
+                    ? "#1e7e50" : C.danger,
+                }}>
+                  {Number(user?.balance || 0).toLocaleString()} so'm
+                </span>
+              </div>
             </div>
 
             <button
@@ -460,9 +408,13 @@ export default function PaymentPage({ user }) {
                 background: submitting ? C.border : `linear-gradient(135deg,${C.primary},${C.primaryDark})`,
                 color: "#fff", fontWeight: 800, fontSize: 15, cursor: submitting ? "default" : "pointer",
                 boxShadow: `0 4px 14px rgba(244,137,74,0.4)`,
+                display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
               }}
             >
-              {submitting ? "Saqlanmoqda..." : "To'lov yuborildi"}
+              {submitting
+                ? "To'lanmoqda..."
+                : <><Wallet size={16} /> Hisobdan to'lash</>
+              }
             </button>
 
             <button
