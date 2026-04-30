@@ -4,7 +4,7 @@ import HomePage from "./pages/HomePage";
 import ProfilePage from "./pages/ProfilePage";
 import OperatorPage from "./pages/OperatorPage";
 import { C } from "./constants";
-import { getToken, clearAuth, productsAPI, offersAPI, authAPI } from "./services/api";
+import { getToken, setToken, clearAuth, productsAPI, offersAPI, authAPI, ping } from "./services/api";
 import { Home, Plus } from "lucide-react";
 
 const OPERATOR_PHONES = ["331350206"];
@@ -24,7 +24,6 @@ const savedUser = () => {
 function hasTgParams() {
   const p = new URLSearchParams(window.location.search);
   if (p.has("tgToken") || p.get("register") === "1") return true;
-  // Inside Telegram Mini App → always try auto-login via initData
   return !!window.Telegram?.WebApp?.initData;
 }
 
@@ -60,13 +59,15 @@ function LoadingSplash() {
 }
 
 export default function App() {
-  const [user,       setUser]       = useState(savedUser);
-  const [nav,        setNav]        = useState(hasTgParams() ? "login" : "home");
+  const cached = savedUser();
+
+  const [user,       setUser]       = useState(cached);
+  const [nav,        setNav]        = useState("home"); // always start at home
   const [products,   setProducts]   = useState([]);
   const [myProducts, setMyProducts] = useState([]);
   const [offers,     setOffers]     = useState([]);
   const [homeAction, setHomeAction] = useState(null);
-  const [loading,    setLoading]    = useState(!!savedUser());
+  const [loading,    setLoading]    = useState(false);
   const [offline,    setOffline]    = useState(false);
   const pollRef = useRef(null);
 
@@ -94,22 +95,67 @@ export default function App() {
     }
   };
 
-  // On mount: verify token + load data
+  // Render ni uyg'otish: ilova ochilganda va har 4 daqiqada ping
   useEffect(() => {
+    ping();
+    const warmup  = [3000, 7000, 13000, 20000, 30000].map(d => setTimeout(ping, d));
+    const keepAlive = setInterval(ping, 4 * 60 * 1000); // 4 daqiqada 1 marta
+    return () => { warmup.forEach(clearTimeout); clearInterval(keepAlive); };
+  }, []);
+
+  // Auto-login silently in background
+  useEffect(() => {
+
+    const params   = new URLSearchParams(window.location.search);
+    const tgToken  = params.get("tgToken");
+    const tgPhone  = params.get("phone");
+    const tgName   = params.get("name");
+    const tgUser   = params.get("telegram");
+    const tgChatId = params.get("tgChatId");
+    const isReg    = params.get("register") === "1";
+    if (tgToken || isReg) window.history.replaceState({}, "", window.location.pathname);
+
     (async () => {
       try {
-        if (getToken()) {
-          const me = await authAPI.me();
-          setUser(me);
-          localStorage.setItem("rm_user", JSON.stringify(me));
+        if (tgToken) {
+          const data = await authAPI.loginWithTgToken(tgToken);
+          setToken(data.token);
+          localStorage.setItem("rm_user", JSON.stringify(data.user));
+          setUser(data.user);
+        } else if (isReg && tgPhone && tgChatId) {
+          const data = await authAPI.register({
+            name:     tgName || "Foydalanuvchi",
+            phone:    tgPhone.replace(/\D/g, "").slice(-9),
+            telegram: tgUser || "",
+            tgChatId,
+          });
+          setToken(data.token);
+          localStorage.setItem("rm_user", JSON.stringify(data.user));
+          setUser(data.user);
+        } else if (getToken()) {
+          // Verify existing token silently
+          try {
+            const me = await authAPI.me();
+            setUser(me);
+            localStorage.setItem("rm_user", JSON.stringify(me));
+          } catch {
+            clearAuth();
+            setUser(null);
+          }
+        } else {
+          // Try Telegram initData auto-login (silent — guest if not registered)
+          const initData = window.Telegram?.WebApp?.initData;
+          if (initData) {
+            try {
+              const data = await authAPI.tgInit(initData);
+              setToken(data.token);
+              localStorage.setItem("rm_user", JSON.stringify(data.user));
+              setUser(data.user);
+            } catch { /* not registered yet, stay as guest */ }
+          }
         }
-      } catch {
-        clearAuth();
-        setUser(null);
-      } finally {
-        await loadData();
-        setLoading(false);
-      }
+      } catch { /* silent */ }
+      loadData();
     })();
   }, []);
 

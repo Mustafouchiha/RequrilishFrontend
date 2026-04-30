@@ -18,12 +18,18 @@ const headers = (extra = {}) => ({
   ...extra,
 });
 
-const apiFetch = (url, opts) =>
-  fetch(url, opts).catch(() => {
-    const err = new Error("SERVER_OFFLINE");
-    err.offline = true;
-    throw err;
-  });
+const apiFetch = (url, opts, timeoutMs = 15000) => {
+  const timeout = new Promise((_, reject) =>
+    setTimeout(() => {
+      const e = new Error("SERVER_OFFLINE"); e.offline = true; reject(e);
+    }, timeoutMs)
+  );
+  return Promise.race([fetch(url, opts), timeout])
+    .catch((e) => {
+      if (e.offline) throw e;
+      const err = new Error("SERVER_OFFLINE"); err.offline = true; throw err;
+    });
+};
 
 const handle = async (res) => {
   const data = await res.json();
@@ -35,10 +41,13 @@ const handle = async (res) => {
   return data;
 };
 
+// ─── PING (server warmup) ─────────────────────────────────────────
+export const ping = () => fetch(`${BASE}/ping`).catch(() => {});
+
 // ─── AUTH ─────────────────────────────────────────────────────────
 export const authAPI = {
-  sendCode: (phone) =>
-    apiFetch(`${BASE}/auth/send-code`, { method: "POST", headers: headers(), body: JSON.stringify({ phone }) }).then(handle),
+  sendCode: (body) =>
+    apiFetch(`${BASE}/auth/send-code`, { method: "POST", headers: headers(), body: JSON.stringify(typeof body === "string" ? { phone: body } : body) }).then(handle),
   register: (body) =>
     apiFetch(`${BASE}/auth/register`, { method: "POST", headers: headers(), body: JSON.stringify(body) }).then(handle),
   login: (body) =>
