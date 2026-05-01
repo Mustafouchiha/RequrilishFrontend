@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Lbl, TInput, BtnPrimary, BtnGhost } from "../components/UI";
 import AvatarUpload from "../components/AvatarUpload";
 import PaymentPage from "./PaymentPage";
@@ -41,6 +41,13 @@ export default function ProfilePage({ user, setUser, myProducts, onDelete, onLog
   const [saving,    setSaving]    = useState(false);
   const [activeTab, setActiveTab] = useState("profile");
 
+  // Polling orqali user yangilansa, editMode bo'lmasa draft sinxronlansin
+  useEffect(() => {
+    if (!editMode) {
+      setDraft({ name: user.name, avatar: user.avatar });
+    }
+  }, [user]);
+
   const save = async () => {
     setSaving(true);
     try {
@@ -50,6 +57,16 @@ export default function ProfilePage({ user, setUser, myProducts, onDelete, onLog
     setSaving(false);
     setEditMode(false);
   };
+
+  // Avatar o'zgarganda darhol serverga saqlansin
+  const handleAvatarChange = async (newAvatar) => {
+    setDraft(d => ({ ...d, avatar: newAvatar }));
+    try {
+      const updated = await authAPI.updateMe({ avatar: newAvatar });
+      setUser(updated);
+    } catch { /* silent */ }
+  };
+
   const cancel = () => { setDraft({ name: user.name, avatar: user.avatar }); setEditMode(false); };
 
   const pendingCount  = myProducts.filter(p => p.status === "pending_approval" || p.status === "pending_payment").length;
@@ -87,7 +104,7 @@ export default function ProfilePage({ user, setUser, myProducts, onDelete, onLog
                       marginBottom:16, textAlign:"center" }}>
           <AvatarUpload
             avatar={draft.avatar} name={draft.name}
-            onAvatar={v => setDraft(d => ({ ...d, avatar: v }))}
+            onAvatar={handleAvatarChange}
           />
 
           {editMode ? (
