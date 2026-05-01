@@ -133,6 +133,8 @@ export const operatorAPI = {
 
 // ─── PRODUCTS ─────────────────────────────────────────────────────
 export const productsAPI = {
+  getById: (id) =>
+    apiFetch(`${BASE}/products/${id}`, { headers: headers() }).then(handle),
   getAll: (params = {}) => {
     const qs = new URLSearchParams(
       Object.fromEntries(Object.entries(params).filter(([, v]) => v))
