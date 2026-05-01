@@ -26,9 +26,8 @@ export default function HomePage({
   const [showOffer,   setShowOffer]   = useState(false);
   const [showNotifs,  setShowNotifs]  = useState(false);
   const [showPayment, setShowPayment] = useState(null);
-  const [cardFrom,    setCardFrom]    = useState("");
+  const [balancePaying, setBalancePaying] = useState(false);
   const [note,        setNote]        = useState("");
-  const [paying,      setPaying]      = useState(false);
   const [showLoc,     setShowLoc]     = useState(false);
   const [fVil,        setFVil]        = useState("");
   const [fTum,        setFTum]        = useState("");
@@ -155,21 +154,18 @@ export default function HomePage({
   };
 
   const confirmPayment = async (offerId) => {
-    setPaying(true);
+    setBalancePaying(true);
     try {
-      await paymentsAPI.send({ offerId, cardFrom, note });
-      const result = await paymentsAPI.confirm(offerId);
-      // Remove product from feed immediately
+      const result = await paymentsAPI.balancePay(offerId);
       if (result.productId) {
         setProducts(prev => prev.filter(p => p.id !== result.productId));
       }
       setOffers(prev => prev.map(o => o.id===offerId ? { ...o, status:"paid" } : o));
       setShowPayment(null);
-      setCardFrom(""); setNote("");
     } catch (e) {
       alert(e.message);
     } finally {
-      setPaying(false);
+      setBalancePaying(false);
     }
   };
 
@@ -569,7 +565,7 @@ export default function HomePage({
                   </div>
                 ) : (
                   <button
-                    onClick={() => { setShowPayment(o); setCardFrom(""); setNote(""); setShowNotifs(false); }}
+                    onClick={() => { setShowPayment(o); setShowNotifs(false); }}
                     style={{ width:"100%", padding:"10px 12px", borderRadius:12,
                               background:`linear-gradient(135deg,${C.primary},${C.primaryDark})`,
                               border:"none", color:"white", fontSize:12, fontWeight:900,
@@ -588,9 +584,10 @@ export default function HomePage({
         <Sheet onClose={() => setShowPayment(null)} maxH="80vh">
           <div style={{ fontSize:16, fontWeight:800, color:C.text, marginBottom:18,
                         display:"flex", alignItems:"center", gap:7 }}>
-            <CreditCard size={16} color={C.primaryDark} /> To'lov ma'lumoti
+            <CreditCard size={16} color={C.primaryDark} /> To'lov
           </div>
 
+          {/* Xizmat haqi */}
           <div style={{ background:C.primaryLight, borderRadius:16, padding:"14px 16px",
                         marginBottom:14, border:`1px solid ${C.primaryBorder}` }}>
             <div style={{ display:"flex", justifyContent:"space-between", marginBottom:6 }}>
@@ -606,50 +603,37 @@ export default function HomePage({
             </div>
           </div>
 
+          {/* Balans */}
           <div style={{ background:"#1C1C1E", borderRadius:16, padding:"16px", marginBottom:14 }}>
-            <div style={{ fontSize:10, color:"rgba(255,255,255,0.5)", marginBottom:6, textTransform:"uppercase", letterSpacing:0.5 }}>Operator karta</div>
-            <div style={{ fontSize:20, fontWeight:900, color:"white", letterSpacing:2, marginBottom:8 }}>{OPERATOR.card}</div>
-            <div style={{ fontSize:11, color:"rgba(255,255,255,0.6)" }}>{OPERATOR.name}</div>
+            <div style={{ fontSize:10, color:"rgba(255,255,255,0.5)", marginBottom:4, textTransform:"uppercase", letterSpacing:0.5 }}>Hisobingizdagi balans</div>
+            <div style={{ fontSize:24, fontWeight:900, color:"white", marginBottom:4 }}>
+              {Number(user?.balance || 0).toLocaleString()} so'm
+            </div>
           </div>
 
+          {/* Balans yetmasa — operatorga yozish */}
           <div style={{ background:"#E8F4FD", borderRadius:14, padding:"12px 14px",
-                        marginBottom:14, border:"1px solid #BFDBF7",
-                        display:"flex", alignItems:"center", gap:12 }}>
-            <div style={{ width:40, height:40, borderRadius:12, background:"#0088CC",
-                          display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
-              <Send size={20} color="white" />
+                        marginBottom:18, border:"1px solid #BFDBF7" }}>
+            <div style={{ fontSize:12, color:"#005580", fontWeight:700, marginBottom:6 }}>
+              💬 Balans yetarli bo'lmasa — operatorga yozing
             </div>
-            <div>
-              <div style={{ fontSize:11, color:"#0088CC", fontWeight:700 }}>Operator Telegram</div>
-              <div style={{ fontSize:15, fontWeight:900, color:"#005580" }}>{OPERATOR.telegram}</div>
-              <div style={{ fontSize:10, color:"#6B7280", marginTop:2 }}>Chekni shu manzilga yuboring</div>
+            <div style={{ fontSize:11, color:"#6B7280", marginBottom:10, lineHeight:1.6 }}>
+              Telegram lichkasida operatorga pul o'tkazing va chekni yuboring. Operator tekshirib hisobingizni to'ldiradi.
             </div>
-          </div>
-
-          <div style={{ fontSize:11, color:C.textMuted, lineHeight:1.7, marginBottom:18,
-                        background:"#FFFBEB", borderRadius:12, padding:"10px 13px", border:"1px solid #FDE68A" }}>
-            1. Yuqoridagi kartaga <b>{Math.round(showPayment.productPrice * 0.05).toLocaleString()} so'm</b> o'tkazing<br/>
-            2. To'lov chekini <b>{OPERATOR.telegram}</b> ga yuboring<br/>
-            3. Siz tasdiqlagandan keyin bot xaridorga sotuvchining kontaktlarini ochadi
-          </div>
-
-          <div style={{ marginBottom:12 }}>
-            <Lbl>Sizning karta raqamingiz (ixtiyoriy)</Lbl>
-            <TInput value={cardFrom} onChange={(v) => setCardFrom(v)} placeholder="8600 0000 0000 0000" />
-          </div>
-          <div style={{ marginBottom:18 }}>
-            <Lbl>Izoh (ixtiyoriy)</Lbl>
-            <textarea value={note} onChange={(e) => setNote(e.target.value)}
-              placeholder="To'lov haqida qo'shimcha ma'lumot..." rows={2}
-              style={{ width:"100%", boxSizing:"border-box", border:`1.5px solid ${C.border}`,
-                       borderRadius:12, padding:"10px 14px", fontSize:13, resize:"none",
-                       outline:"none", background:C.bg, fontFamily:"inherit" }} />
+            <a href={`https://t.me/${OPERATOR.telegram.replace("@","")}`}
+              target="_blank" rel="noopener noreferrer"
+              style={{ display:"inline-flex", alignItems:"center", gap:7,
+                       background:"#0088CC", borderRadius:10,
+                       padding:"9px 16px", color:"#fff", textDecoration:"none",
+                       fontSize:12, fontWeight:700 }}>
+              <Send size={14} /> {OPERATOR.telegram} — Pul qo'shish
+            </a>
           </div>
 
           <div style={{ display:"flex", gap:9 }}>
             <BtnGhost onClick={() => setShowPayment(null)}>Yopish</BtnGhost>
-            <BtnPrimary onClick={() => confirmPayment(showPayment.id)} disabled={paying}>
-              <Check size={15} /> {paying ? "⏳ Yuborilmoqda..." : "To'lov yuborildi va tasdiqlash"}
+            <BtnPrimary onClick={() => confirmPayment(showPayment.id)} disabled={balancePaying}>
+              <Check size={15} /> {balancePaying ? "⏳ To'lanmoqda..." : "Hisobdan to'lash"}
             </BtnPrimary>
           </div>
         </Sheet>
