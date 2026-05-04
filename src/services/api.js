@@ -161,6 +161,8 @@ export const offersAPI = {
     apiFetch(`${BASE}/offers/sent`, { headers: headers() }).then(handle),
   markPaid: (id) =>
     apiFetch(`${BASE}/offers/${id}/paid`, { method: "PUT", headers: headers() }).then(handle),
+  cancel: (id) =>
+    apiFetch(`${BASE}/offers/${id}`, { method: "DELETE", headers: headers() }).then(handle),
 };
 
 // ─── PAYMENTS ─────────────────────────────────────────────────────

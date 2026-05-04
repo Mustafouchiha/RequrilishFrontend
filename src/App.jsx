@@ -230,7 +230,9 @@ export default function App() {
       backdropFilter:"blur(16px)", borderTop:`1px solid ${C.border}`,
       boxShadow:"0 -2px 14px rgba(0,0,0,0.06)",
       display:"flex", alignItems:"center",
-      padding:"10px 0 20px", zIndex:30,
+      padding:"10px 0 0",
+      paddingBottom:"calc(10px + env(safe-area-inset-bottom, 0px))",
+      zIndex:30,
     }}>
       <div onClick={() => setNav("home")}
         style={{ flex:1, textAlign:"center", cursor:"pointer" }}>
@@ -326,7 +328,8 @@ export default function App() {
         <>
           <ProfilePage
             user={user} setUser={handleUpdateUser}
-            myProducts={myProducts} onDelete={handleDeleteProduct}
+            myProducts={myProducts} offers={offers}
+            onDelete={handleDeleteProduct}
             onLogout={handleLogout} isOperator={isOperator(user)}
             onOpenOperator={() => setNav("operator")}
           />

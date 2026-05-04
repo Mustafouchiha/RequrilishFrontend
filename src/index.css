@@ -12,6 +12,12 @@ html, body, #root {
   background: #FFF8F4;
 }
 
+/* iOS safe area */
+:root {
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-top: env(safe-area-inset-top, 0px);
+}
+
 body {
   -webkit-tap-highlight-color: transparent;
   -webkit-overflow-scrolling: touch;

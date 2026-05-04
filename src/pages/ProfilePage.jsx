@@ -35,7 +35,7 @@ function StatusBadge({ status, rejectReason }) {
   );
 }
 
-export default function ProfilePage({ user, setUser, myProducts, onDelete, onLogout, isOperator, onOpenOperator }) {
+export default function ProfilePage({ user, setUser, myProducts, offers = [], onDelete, onLogout, isOperator, onOpenOperator }) {
   const [editMode,  setEditMode]  = useState(false);
   const [draft,     setDraft]     = useState({ name: user.name, avatar: user.avatar });
   const [saving,    setSaving]    = useState(false);
@@ -74,7 +74,8 @@ export default function ProfilePage({ user, setUser, myProducts, onDelete, onLog
 
   return (
     <div style={{ padding:"20px 16px 10px", overflowY:"auto", fontFamily:"'Nunito','Segoe UI',sans-serif",
-                  background:C.bg, minHeight:"100vh", paddingBottom:84,
+                  background:C.bg, minHeight:"100vh",
+                  paddingBottom:"calc(84px + env(safe-area-inset-bottom, 0px))",
                   maxWidth:430, margin:"0 auto", position:"relative" }}>
 
       {/* Tab bar */}
@@ -261,6 +262,16 @@ export default function ProfilePage({ user, setUser, myProducts, onDelete, onLog
                     <span style={{ fontSize:9, color:C.textMuted, display:"inline-flex", alignItems:"center", gap:2 }}>
                       <MapPin size={9} color={C.textMuted} /> {p.tuman||p.viloyat}
                     </span>
+                    {(() => {
+                      const cnt = offers.filter(o => o.productId === p.id).length;
+                      return cnt > 0 ? (
+                        <span style={{ fontSize:9, fontWeight:800, padding:"2px 7px", borderRadius:7,
+                                       background:"#E8F2FD", color:"#3A85C8",
+                                       display:"inline-flex", alignItems:"center", gap:2 }}>
+                          📨 {cnt} taklif
+                        </span>
+                      ) : null;
+                    })()}
                   </div>
                   <div style={{ marginTop:4 }}>
                     <StatusBadge status={p.status || "approved"} rejectReason={p.rejectReason} />

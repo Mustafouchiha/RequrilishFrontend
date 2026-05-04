@@ -12,7 +12,7 @@ import {
   Check, Send, User, Phone, Hash, Info,
   Loader2, CheckCircle, Clock, Package, CreditCard,
   Tag, Home, Plus, Camera, AlertCircle, Rocket,
-  ChevronDown, X, ArrowLeft, ArrowRight, MapPin,
+  ChevronDown, X, ArrowLeft, ArrowRight, MapPin, Trash2, RefreshCw,
 } from "lucide-react";
 
 export default function HomePage({
@@ -511,11 +511,23 @@ export default function HomePage({
       {showNotifs && (
         <Sheet onClose={() => setShowNotifs(false)} maxH="85vh">
           <div style={{ fontSize:16, fontWeight:800, color:C.text, marginBottom:18,
-                        display:"flex", alignItems:"center", gap:7 }}>
-            <Bell size={16} color={C.primaryDark} /> Xabarnomalar
-            {myNotifs.length>0 && (
-              <span style={{ fontSize:12, color:C.textMuted, fontWeight:500 }}>({myNotifs.length} ta)</span>
-            )}
+                        display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+            <div style={{ display:"flex", alignItems:"center", gap:7 }}>
+              <Bell size={16} color={C.primaryDark} /> Xabarnomalar
+              {myNotifs.length>0 && (
+                <span style={{ fontSize:12, color:C.textMuted, fontWeight:500 }}>({myNotifs.length} ta)</span>
+              )}
+            </div>
+            <button onClick={async () => {
+              try {
+                const offs = await offersAPI.getReceived();
+                setOffers(offs);
+              } catch {}
+            }} style={{ background:C.primaryLight, border:"none", borderRadius:10,
+                        padding:"6px 10px", cursor:"pointer", display:"flex", alignItems:"center", gap:5,
+                        color:C.primaryDark, fontSize:11, fontWeight:700 }}>
+              <RefreshCw size={13} /> Yangilash
+            </button>
           </div>
 
           {myNotifs.length===0 ? (
@@ -530,7 +542,7 @@ export default function HomePage({
             myNotifs.map(o => (
               <div key={o.id} style={{ background:C.bg, borderRadius:16, padding:"13px 14px",
                                        marginBottom:10, border:`1px solid ${o.status==="paid"?C.primaryBorder:C.border}` }}>
-                <div style={{ display:"flex", justifyContent:"space-between", marginBottom:8 }}>
+                <div style={{ display:"flex", justifyContent:"space-between", marginBottom:8, alignItems:"center" }}>
                   <span style={{ fontSize:10, fontWeight:800, padding:"2px 8px", borderRadius:8,
                                  background: o.status==="paid" ? "#E8F8F0" : "#FFF8E6",
                                  color: o.status==="paid" ? "#28A869" : "#D4920A",
@@ -548,15 +560,13 @@ export default function HomePage({
                 <div style={{ fontSize:12, fontWeight:700, color:C.text, marginBottom:2,
                               display:"flex", alignItems:"center", gap:5 }}>
                   <Package size={12} color={C.textSub} /> {o.productName}
-                  <span style={{ color:C.textMuted, fontWeight:500 }}>(ID: #{o.productPublicId || o.productId})</span>
                 </div>
 
                 <div style={{ fontSize:11, color:C.textSub, marginBottom:10,
                               display:"flex", alignItems:"center", gap:5 }}>
-                  <User size={11} /> Xaridor (ID: <b>{o.buyerPublicId || "—"}</b>)
+                  <User size={11} /> Xaridor ID: <b>{o.buyerPublicId || o.buyerId?.slice(0,8) || "—"}</b>
                 </div>
 
-                {/* NO delete button — auto handled by backend */}
                 {o.status==="paid" ? (
                   <div style={{ padding:"10px", borderRadius:12,
                                 background:"#E8F8F0", color:"#28A869",
@@ -564,14 +574,28 @@ export default function HomePage({
                     ✅ To'lov qilingan — mahsulot sotildi
                   </div>
                 ) : (
-                  <button
-                    onClick={() => { setShowPayment(o); setShowNotifs(false); }}
-                    style={{ width:"100%", padding:"10px 12px", borderRadius:12,
-                              background:`linear-gradient(135deg,${C.primary},${C.primaryDark})`,
-                              border:"none", color:"white", fontSize:12, fontWeight:900,
-                              cursor:"pointer", fontFamily:"inherit" }}>
-                    💳 5% to'lovni yuborish va tasdiqlash
-                  </button>
+                  <div style={{ display:"flex", gap:8 }}>
+                    <button
+                      onClick={() => { setShowPayment(o); setShowNotifs(false); }}
+                      style={{ flex:1, padding:"10px 12px", borderRadius:12,
+                                background:`linear-gradient(135deg,${C.primary},${C.primaryDark})`,
+                                border:"none", color:"white", fontSize:12, fontWeight:900,
+                                cursor:"pointer", fontFamily:"inherit" }}>
+                      💰 5% to'lovni amalga oshirish
+                    </button>
+                    <button
+                      onClick={async () => {
+                        try {
+                          await offersAPI.cancel(o.id);
+                          setOffers(prev => prev.filter(x => x.id !== o.id));
+                        } catch(e) { alert(e.message); }
+                      }}
+                      style={{ width:38, height:38, borderRadius:12, border:"none",
+                                background:"#FFF1F0", color:C.danger, cursor:"pointer",
+                                display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+                      <Trash2 size={15} />
+                    </button>
+                  </div>
                 )}
               </div>
             ))
