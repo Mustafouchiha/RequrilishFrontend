@@ -13,10 +13,12 @@ import {
   Loader2, CheckCircle, Clock, Package, CreditCard,
   Tag, Home, Plus, Camera, AlertCircle, Rocket,
   ChevronDown, X, ArrowLeft, ArrowRight, MapPin, Trash2, RefreshCw,
+  Eye, Heart,
 } from "lucide-react";
 
 export default function HomePage({
   user, products, setProducts, offers, setOffers,
+  sentOffers = [], setSentOffers,
   onNavChange, homeAction, setHomeAction,
   onProductAdded, onDelete, isOperator = false, loggedIn, onRequireAuth,
 }) {
@@ -28,6 +30,7 @@ export default function HomePage({
   const [showPayment, setShowPayment] = useState(null);
   const [balancePaying, setBalancePaying] = useState(false);
   const [note,        setNote]        = useState("");
+  const [notifTab,    setNotifTab]    = useState("received");
   const [showLoc,     setShowLoc]     = useState(false);
   const [fVil,        setFVil]        = useState("");
   const [fTum,        setFTum]        = useState("");
@@ -169,8 +172,23 @@ export default function HomePage({
     }
   };
 
+  const handleLike = async (id) => {
+    if (!loggedIn) return requireAuth();
+    try {
+      const res = await productsAPI.like(id);
+      setProducts(prev => prev.map(p =>
+        p.id === id
+          ? { ...p, isLiked: res.liked, likeCount: res.liked ? (p.likeCount||0)+1 : Math.max(0,(p.likeCount||0)-1) }
+          : p
+      ));
+      if (selected?.id === id) {
+        setSelected(prev => prev ? { ...prev, isLiked: res.liked, likeCount: res.liked ? (prev.likeCount||0)+1 : Math.max(0,(prev.likeCount||0)-1) } : prev);
+      }
+    } catch { /* silent */ }
+  };
+
   const myNotifs    = offers;
-  const unreadCount = myNotifs.filter(o => o.status==="pending").length;
+  const unreadCount = myNotifs.filter(o => o.status==="pending").length + sentOffers.filter(o => o.status==="pending").length;
   const isLocOn  = !!fVil;
   const locLabel = fVil ? (fTum||fVil) : "Joylashuv";
   const canStep2 = form.photos?.length > 0;
@@ -289,7 +307,14 @@ export default function HomePage({
 
       {/* Product grid */}
       <div style={{ padding:"0 16px", display:"grid", gridTemplateColumns:"1fr 1fr", gap:14 }}>
-        {filtered.map(p => <PCard key={p.id} p={p} isOwn={loggedIn && p.ownerId===user.id} onClick={() => openSelected(p)} />)}
+        {filtered.map(p => (
+          <PCard key={p.id} p={p}
+            isOwn={loggedIn && p.ownerId===user.id}
+            onClick={() => openSelected(p)}
+            onLike={handleLike}
+            loggedIn={loggedIn}
+          />
+        ))}
       </div>
 
       {filtered.length===0 && (
@@ -413,6 +438,20 @@ export default function HomePage({
               ))}
             </div>
 
+            {/* View + like stats in detail */}
+            <div style={{ display:"flex", gap:14, marginBottom:12, color:C.textMuted, fontSize:12 }}>
+              <span style={{ display:"flex", alignItems:"center", gap:4 }}>
+                <Eye size={13} /> {selected.viewCount || 0} ko'rish
+              </span>
+              <span style={{ display:"flex", alignItems:"center", gap:4,
+                             color: selected.isLiked ? "#EF4444" : C.textMuted }}>
+                <Heart size={13}
+                  color={selected.isLiked ? "#EF4444" : C.textMuted}
+                  fill={selected.isLiked ? "#EF4444" : "none"} />
+                {selected.likeCount || 0} like
+              </span>
+            </div>
+
             {selected.ownerId === user.id ? (
               <div style={{ background:C.primaryLight, border:`1px solid ${C.primaryBorder}`,
                             borderRadius:14, padding:"12px 16px", textAlign:"center" }}>
@@ -420,6 +459,14 @@ export default function HomePage({
               </div>
             ) : (
               <div style={{ display:"flex", gap:9 }}>
+                <button onClick={() => handleLike(selected.id)}
+                  style={{ width:42, height:42, borderRadius:12, border:`1.5px solid ${selected.isLiked ? "#FCA5A5" : C.border}`,
+                           background: selected.isLiked ? "#FFF1F0" : C.bg,
+                           display:"flex", alignItems:"center", justifyContent:"center",
+                           cursor:"pointer", flexShrink:0 }}>
+                  <Heart size={18} color={selected.isLiked ? "#EF4444" : C.textSub}
+                    fill={selected.isLiked ? "#EF4444" : "none"} />
+                </button>
                 <BtnGhost onClick={() => setSelected(null)}>Yopish</BtnGhost>
                 <BtnPrimary onClick={() => { if (!loggedIn) return requireAuth(); setShowOffer(selected); }}>
                   <Send size={15} /> Taklif yuborish
@@ -509,19 +556,20 @@ export default function HomePage({
 
       {/* NOTIFICATIONS SHEET */}
       {showNotifs && (
-        <Sheet onClose={() => setShowNotifs(false)} maxH="85vh">
-          <div style={{ fontSize:16, fontWeight:800, color:C.text, marginBottom:18,
+        <Sheet onClose={() => setShowNotifs(false)} maxH="88vh">
+          <div style={{ fontSize:16, fontWeight:800, color:C.text, marginBottom:12,
                         display:"flex", alignItems:"center", justifyContent:"space-between" }}>
             <div style={{ display:"flex", alignItems:"center", gap:7 }}>
               <Bell size={16} color={C.primaryDark} /> Xabarnomalar
-              {myNotifs.length>0 && (
-                <span style={{ fontSize:12, color:C.textMuted, fontWeight:500 }}>({myNotifs.length} ta)</span>
-              )}
             </div>
             <button onClick={async () => {
               try {
-                const offs = await offersAPI.getReceived();
+                const [offs, sent] = await Promise.all([
+                  offersAPI.getReceived(),
+                  offersAPI.getSent().catch(() => []),
+                ]);
                 setOffers(offs);
+                if (setSentOffers) setSentOffers(sent);
               } catch {}
             }} style={{ background:C.primaryLight, border:"none", borderRadius:10,
                         padding:"6px 10px", cursor:"pointer", display:"flex", alignItems:"center", gap:5,
@@ -530,16 +578,33 @@ export default function HomePage({
             </button>
           </div>
 
-          {myNotifs.length===0 ? (
-            <div style={{ textAlign:"center", padding:"40px 20px", color:C.textMuted }}>
-              <div style={{ display:"flex", justifyContent:"center", marginBottom:10 }}>
-                <Bell size={44} color={C.textMuted} style={{ opacity:0.3 }} />
+          {/* Tabs */}
+          <div style={{ display:"flex", gap:0, marginBottom:14, borderRadius:12, overflow:"hidden",
+                        border:`1px solid ${C.border}` }}>
+            {[
+              { key:"received", label:`📥 Keldi (${myNotifs.length})` },
+              { key:"sent",     label:`📤 Yuborilgan (${sentOffers.length})` },
+            ].map(t => (
+              <button key={t.key} onClick={() => setNotifTab(t.key)}
+                style={{ flex:1, padding:"9px 4px", border:"none", fontFamily:"inherit",
+                         fontSize:12, fontWeight:700, cursor:"pointer",
+                         background: notifTab===t.key ? C.primaryDark : "white",
+                         color: notifTab===t.key ? "white" : C.textSub,
+                         transition:"all 0.15s" }}>
+                {t.label}
+              </button>
+            ))}
+          </div>
+
+          {/* RECEIVED (as seller) */}
+          {notifTab === "received" && (
+            myNotifs.length===0 ? (
+              <div style={{ textAlign:"center", padding:"40px 20px", color:C.textMuted }}>
+                <Bell size={44} color={C.textMuted} style={{ opacity:0.3, display:"block", margin:"0 auto 10px" }} />
+                <div style={{ fontSize:13, fontWeight:700 }}>Hali taklif kelmagan</div>
+                <div style={{ fontSize:11, marginTop:4 }}>E'lonlaringizga taklif kelganda bu yerda ko'rinadi</div>
               </div>
-              <div style={{ fontSize:13, fontWeight:700 }}>Hali xabarnoma yo'q</div>
-              <div style={{ fontSize:11, marginTop:4 }}>E'lonlaringizga taklif kelganda bu yerda ko'rinadi</div>
-            </div>
-          ) : (
-            myNotifs.map(o => (
+            ) : myNotifs.map(o => (
               <div key={o.id} style={{ background:C.bg, borderRadius:16, padding:"13px 14px",
                                        marginBottom:10, border:`1px solid ${o.status==="paid"?C.primaryBorder:C.border}` }}>
                 <div style={{ display:"flex", justifyContent:"space-between", marginBottom:8, alignItems:"center" }}>
@@ -547,55 +612,96 @@ export default function HomePage({
                                  background: o.status==="paid" ? "#E8F8F0" : "#FFF8E6",
                                  color: o.status==="paid" ? "#28A869" : "#D4920A",
                                  display:"inline-flex", alignItems:"center", gap:4 }}>
-                    {o.status==="paid"
-                      ? <><CheckCircle size={10} /> To'landi</>
-                      : <><Clock size={10} /> Kutilmoqda</>
-                    }
+                    {o.status==="paid" ? <><CheckCircle size={10} /> To'landi</> : <><Clock size={10} /> Kutilmoqda</>}
                   </span>
                   <span style={{ fontSize:9, color:C.textMuted }}>
                     {new Date(o.sentAt).toLocaleDateString("uz-UZ")}
                   </span>
                 </div>
-
                 <div style={{ fontSize:12, fontWeight:700, color:C.text, marginBottom:2,
                               display:"flex", alignItems:"center", gap:5 }}>
                   <Package size={12} color={C.textSub} /> {o.productName}
                 </div>
-
                 <div style={{ fontSize:11, color:C.textSub, marginBottom:10,
                               display:"flex", alignItems:"center", gap:5 }}>
-                  <User size={11} /> Xaridor ID: <b>{o.buyerPublicId || o.buyerId?.slice(0,8) || "—"}</b>
+                  <User size={11} /> Xaridor: <b>{o.buyerName || o.buyerId?.slice(0,8) || "—"}</b>
                 </div>
-
                 {o.status==="paid" ? (
-                  <div style={{ padding:"10px", borderRadius:12,
-                                background:"#E8F8F0", color:"#28A869",
-                                fontSize:12, fontWeight:900, textAlign:"center" }}>
+                  <div style={{ padding:"10px", borderRadius:12, background:"#E8F8F0",
+                                color:"#28A869", fontSize:12, fontWeight:900, textAlign:"center" }}>
                     ✅ To'lov qilingan — mahsulot sotildi
                   </div>
                 ) : (
                   <div style={{ display:"flex", gap:8 }}>
-                    <button
-                      onClick={() => { setShowPayment(o); setShowNotifs(false); }}
+                    <button onClick={() => { setShowPayment(o); setShowNotifs(false); }}
                       style={{ flex:1, padding:"10px 12px", borderRadius:12,
-                                background:`linear-gradient(135deg,${C.primary},${C.primaryDark})`,
-                                border:"none", color:"white", fontSize:12, fontWeight:900,
-                                cursor:"pointer", fontFamily:"inherit" }}>
+                               background:`linear-gradient(135deg,${C.primary},${C.primaryDark})`,
+                               border:"none", color:"white", fontSize:12, fontWeight:900,
+                               cursor:"pointer", fontFamily:"inherit" }}>
                       💰 5% to'lovni amalga oshirish
                     </button>
-                    <button
-                      onClick={async () => {
-                        try {
-                          await offersAPI.cancel(o.id);
-                          setOffers(prev => prev.filter(x => x.id !== o.id));
-                        } catch(e) { alert(e.message); }
+                    <button onClick={async () => {
+                        try { await offersAPI.cancel(o.id); setOffers(prev => prev.filter(x => x.id !== o.id)); }
+                        catch(e) { alert(e.message); }
                       }}
                       style={{ width:38, height:38, borderRadius:12, border:"none",
-                                background:"#FFF1F0", color:C.danger, cursor:"pointer",
-                                display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+                               background:"#FFF1F0", color:C.danger, cursor:"pointer",
+                               display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
                       <Trash2 size={15} />
                     </button>
                   </div>
+                )}
+              </div>
+            ))
+          )}
+
+          {/* SENT (as buyer) */}
+          {notifTab === "sent" && (
+            sentOffers.length===0 ? (
+              <div style={{ textAlign:"center", padding:"40px 20px", color:C.textMuted }}>
+                <Send size={44} color={C.textMuted} style={{ opacity:0.3, display:"block", margin:"0 auto 10px" }} />
+                <div style={{ fontSize:13, fontWeight:700 }}>Hali taklif yubormaganssiz</div>
+                <div style={{ fontSize:11, marginTop:4 }}>Mahsulotlarga taklif yuborilsa bu yerda ko'rinadi</div>
+              </div>
+            ) : sentOffers.map(o => (
+              <div key={o.id} style={{ background:C.bg, borderRadius:16, padding:"13px 14px",
+                                       marginBottom:10, border:`1px solid ${o.status==="paid"?C.primaryBorder:C.border}` }}>
+                <div style={{ display:"flex", justifyContent:"space-between", marginBottom:8, alignItems:"center" }}>
+                  <span style={{ fontSize:10, fontWeight:800, padding:"2px 8px", borderRadius:8,
+                                 background: o.status==="paid" ? "#E8F8F0" : "#FFF8E6",
+                                 color: o.status==="paid" ? "#28A869" : "#D4920A",
+                                 display:"inline-flex", alignItems:"center", gap:4 }}>
+                    {o.status==="paid" ? <><CheckCircle size={10} /> To'landi</> : <><Clock size={10} /> Kutilmoqda</>}
+                  </span>
+                  <span style={{ fontSize:9, color:C.textMuted }}>
+                    {new Date(o.sentAt).toLocaleDateString("uz-UZ")}
+                  </span>
+                </div>
+                <div style={{ fontSize:12, fontWeight:700, color:C.text, marginBottom:2,
+                              display:"flex", alignItems:"center", gap:5 }}>
+                  <Package size={12} color={C.textSub} /> {o.productName}
+                </div>
+                <div style={{ fontSize:11, color:C.textSub, marginBottom:10 }}>
+                  Narx: <b>{Number(o.productPrice||0).toLocaleString()} so'm</b>
+                </div>
+                {o.status==="paid" ? (
+                  <div style={{ padding:"10px", borderRadius:12, background:"#E8F8F0",
+                                color:"#28A869", fontSize:12, fontWeight:900, textAlign:"center" }}>
+                    ✅ Bitim yakunlandi
+                  </div>
+                ) : (
+                  <button onClick={async () => {
+                      try {
+                        await offersAPI.cancel(o.id);
+                        if (setSentOffers) setSentOffers(prev => prev.filter(x => x.id !== o.id));
+                      } catch(e) { alert(e.message); }
+                    }}
+                    style={{ width:"100%", padding:"10px", borderRadius:12, border:"none",
+                             background:"#FFF1F0", color:C.danger, fontSize:12, fontWeight:700,
+                             cursor:"pointer", fontFamily:"inherit",
+                             display:"flex", alignItems:"center", justifyContent:"center", gap:6 }}>
+                    <Trash2 size={14} /> Taklifni bekor qilish
+                  </button>
                 )}
               </div>
             ))

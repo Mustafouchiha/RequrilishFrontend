@@ -61,14 +61,15 @@ function LoadingSplash() {
 export default function App() {
   const cached = savedUser();
 
-  const [user,       setUser]       = useState(cached);
-  const [nav,        setNav]        = useState("home"); // always start at home
-  const [products,   setProducts]   = useState([]);
-  const [myProducts, setMyProducts] = useState([]);
-  const [offers,     setOffers]     = useState([]);
-  const [homeAction, setHomeAction] = useState(null);
-  const [loading,    setLoading]    = useState(false);
-  const [offline,    setOffline]    = useState(false);
+  const [user,        setUser]        = useState(cached);
+  const [nav,         setNav]         = useState("home"); // always start at home
+  const [products,    setProducts]    = useState([]);
+  const [myProducts,  setMyProducts]  = useState([]);
+  const [offers,      setOffers]      = useState([]);
+  const [sentOffers,  setSentOffers]  = useState([]);
+  const [homeAction,  setHomeAction]  = useState(null);
+  const [loading,     setLoading]     = useState(false);
+  const [offline,     setOffline]     = useState(false);
   const pollRef = useRef(null);
 
   const loggedIn = !!user && !!getToken();
@@ -80,15 +81,18 @@ export default function App() {
       setOffline(false);
       setProducts(prods);
       if (getToken()) {
-        const [my, offs] = await Promise.all([
+        const [my, offs, sent] = await Promise.all([
           productsAPI.getMy(),
           offersAPI.getReceived(),
+          offersAPI.getSent().catch(() => []),
         ]);
         setMyProducts(my);
         setOffers(offs);
+        setSentOffers(sent);
       } else {
         setMyProducts([]);
         setOffers([]);
+        setSentOffers([]);
       }
     } catch (e) {
       if (e.offline) setOffline(true);
@@ -309,6 +313,7 @@ export default function App() {
         <HomePage
           user={guestUser} products={products} setProducts={setProducts}
           offers={offers} setOffers={setOffers}
+          sentOffers={sentOffers} setSentOffers={setSentOffers}
           onNavChange={setNav} homeAction={homeAction} setHomeAction={setHomeAction}
           onProductAdded={handleAddProduct} loggedIn={false}
           onRequireAuth={() => setNav("login")}
@@ -343,6 +348,7 @@ export default function App() {
           <HomePage
             user={user} products={products} setProducts={setProducts}
             offers={offers} setOffers={setOffers}
+            sentOffers={sentOffers} setSentOffers={setSentOffers}
             onNavChange={setNav} homeAction={homeAction} setHomeAction={setHomeAction}
             onProductAdded={handleAddProduct} onDelete={handleDeleteProduct}
             isOperator={isOperator(user)} loggedIn={true}

@@ -193,7 +193,8 @@ export function Sheet({ onClose, children, maxH = "92vh" }) {
           flex:1,
           overflowY: isFullscreen ? "hidden" : "auto",
           overflowX:"hidden",
-          padding:"0 18px 38px",
+          padding:"0 18px",
+          paddingBottom:"calc(env(safe-area-inset-bottom, 0px) + 32px)",
           display: isFullscreen ? "flex" : "block",
           flexDirection: isFullscreen ? "column" : undefined,
         }}>

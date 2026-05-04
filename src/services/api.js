@@ -123,6 +123,11 @@ export const operatorAPI = {
   removeOperator: (id) =>
     apiFetch(`${BASE}/operator/operators/${id}`, { method: "DELETE", headers: headers() }).then(handle),
 
+  togglePayment: (id) =>
+    apiFetch(`${BASE}/operator/posts/${id}/toggle-payment`, { method: "PUT", headers: headers() }).then(handle),
+  editPost: (id, body) =>
+    apiFetch(`${BASE}/operator/posts/${id}/edit`, { method: "PUT", headers: headers(), body: JSON.stringify(body) }).then(handle),
+
   // Legacy
   setUserBlocked: (id, blocked) =>
     blocked ? operatorAPI.blockUser(id) : operatorAPI.unblockUser(id),
@@ -135,6 +140,10 @@ export const operatorAPI = {
 export const productsAPI = {
   getById: (id) =>
     apiFetch(`${BASE}/products/${id}`, { headers: headers() }).then(handle),
+  view: (id) =>
+    apiFetch(`${BASE}/products/${id}/view`, { method: "POST", headers: headers() }).then(handle).catch(() => {}),
+  like: (id) =>
+    apiFetch(`${BASE}/products/${id}/like`, { method: "POST", headers: headers() }).then(handle),
   getAll: (params = {}) => {
     const qs = new URLSearchParams(
       Object.fromEntries(Object.entries(params).filter(([, v]) => v))

@@ -7,6 +7,7 @@ import {
   Lock, Unlock, CreditCard, CheckSquare,
   AlertTriangle, RefreshCw, PlusCircle, MinusCircle,
   Shield, UserPlus, UserMinus, Wallet, Clock,
+  Pencil, ToggleLeft, ToggleRight, Heart,
 } from "lucide-react";
 
 const phoneCore = (v) => String(v || "").replace(/\D/g, "").slice(-9);
@@ -123,6 +124,100 @@ function AmountModal({ title, Icon, iconColor, user, onOk, onCancel, maxAmount }
   );
 }
 
+function EditPostModal({ post, onOk, onCancel }) {
+  const [form, setForm] = useState({
+    name:      post.name || "",
+    price:     String(post.price || ""),
+    qty:       String(post.qty || ""),
+    unit:      post.unit || "dona",
+    category:  post.category || "boshqa",
+    condition: post.condition || "Yaxshi",
+    viloyat:   post.viloyat || "",
+    tuman:     post.tuman || "",
+  });
+  const [busy, setBusy] = useState(false);
+
+  const f = (k) => (v) => setForm(p => ({ ...p, [k]: v }));
+
+  const go = async () => {
+    if (!form.name || !form.price || busy) return;
+    setBusy(true);
+    try {
+      await onOk({
+        ...form,
+        price: Number(form.price),
+        qty:   Number(form.qty),
+      });
+    } catch { setBusy(false); }
+  };
+
+  return (
+    <Modal>
+      <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:14 }}>
+        <Pencil size={16} color={C.primaryDark} />
+        <b style={{ fontSize:15, color:C.text }}>Postni tahrirlash</b>
+      </div>
+      <div style={{ maxHeight:"60vh", overflowY:"auto" }}>
+        <div style={{ fontSize:10, color:C.textSub, marginBottom:3, fontWeight:700 }}>Nomi *</div>
+        <input value={form.name} onChange={e => f("name")(e.target.value)}
+          style={{ width:"100%", boxSizing:"border-box", padding:"8px 10px", borderRadius:8,
+                   border:`1.5px solid ${C.border}`, fontSize:13, fontFamily:"inherit", outline:"none", marginBottom:10 }} />
+
+        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8, marginBottom:10 }}>
+          <div>
+            <div style={{ fontSize:10, color:C.textSub, marginBottom:3, fontWeight:700 }}>Narx *</div>
+            <input type="number" value={form.price} onChange={e => f("price")(e.target.value)}
+              style={{ width:"100%", boxSizing:"border-box", padding:"8px 10px", borderRadius:8,
+                       border:`1.5px solid ${C.border}`, fontSize:13, fontFamily:"inherit", outline:"none" }} />
+          </div>
+          <div>
+            <div style={{ fontSize:10, color:C.textSub, marginBottom:3, fontWeight:700 }}>Miqdor</div>
+            <input type="number" value={form.qty} onChange={e => f("qty")(e.target.value)}
+              style={{ width:"100%", boxSizing:"border-box", padding:"8px 10px", borderRadius:8,
+                       border:`1.5px solid ${C.border}`, fontSize:13, fontFamily:"inherit", outline:"none" }} />
+          </div>
+        </div>
+
+        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8, marginBottom:10 }}>
+          <div>
+            <div style={{ fontSize:10, color:C.textSub, marginBottom:3, fontWeight:700 }}>O'lchov</div>
+            <select value={form.unit} onChange={e => f("unit")(e.target.value)}
+              style={{ width:"100%", padding:"8px 10px", borderRadius:8,
+                       border:`1.5px solid ${C.border}`, fontSize:12, fontFamily:"inherit", outline:"none" }}>
+              {["dona","kg","m²","m","m³","ton"].map(u => <option key={u}>{u}</option>)}
+            </select>
+          </div>
+          <div>
+            <div style={{ fontSize:10, color:C.textSub, marginBottom:3, fontWeight:700 }}>Holat</div>
+            <select value={form.condition} onChange={e => f("condition")(e.target.value)}
+              style={{ width:"100%", padding:"8px 10px", borderRadius:8,
+                       border:`1.5px solid ${C.border}`, fontSize:12, fontFamily:"inherit", outline:"none" }}>
+              {["A'lo","Yaxshi","O'rta"].map(c => <option key={c}>{c}</option>)}
+            </select>
+          </div>
+        </div>
+
+        <div style={{ fontSize:10, color:C.textSub, marginBottom:3, fontWeight:700 }}>Viloyat</div>
+        <input value={form.viloyat} onChange={e => f("viloyat")(e.target.value)}
+          style={{ width:"100%", boxSizing:"border-box", padding:"8px 10px", borderRadius:8,
+                   border:`1.5px solid ${C.border}`, fontSize:13, fontFamily:"inherit", outline:"none", marginBottom:10 }} />
+
+        <div style={{ fontSize:10, color:C.textSub, marginBottom:3, fontWeight:700 }}>Tuman</div>
+        <input value={form.tuman} onChange={e => f("tuman")(e.target.value)}
+          style={{ width:"100%", boxSizing:"border-box", padding:"8px 10px", borderRadius:8,
+                   border:`1.5px solid ${C.border}`, fontSize:13, fontFamily:"inherit", outline:"none", marginBottom:14 }} />
+      </div>
+      <div style={{ display:"flex", gap:8 }}>
+        <Btn ghost onClick={onCancel}>Bekor</Btn>
+        <Btn color={C.primaryDark} onClick={go} disabled={!form.name || !form.price || busy}>
+          {busy ? <Loader2 size={13} style={{ animation:"spin 1s linear infinite" }} /> : <CheckCircle size={13} />}
+          Saqlash
+        </Btn>
+      </div>
+    </Modal>
+  );
+}
+
 function AddOpModal({ onOk, onCancel }) {
   const [ident, setIdent] = useState("");
   const [busy, setBusy] = useState(false);
@@ -197,6 +292,7 @@ export default function OperatorPage({ onBack, user }) {
   const [depositUser,  setDepositUser]  = useState(null);
   const [withdrawUser, setWithdrawUser] = useState(null);
   const [addOpDlg,     setAddOpDlg]     = useState(false);
+  const [editTarget,   setEditTarget]   = useState(null);
 
   const [pending,      setPending]      = useState([]);
   const [users,        setUsers]        = useState([]);
@@ -276,6 +372,24 @@ export default function OperatorPage({ onBack, user }) {
   const confirmPay   = async (offerId) => { try { await operatorAPI.confirmPayment(offerId); setPayments(p => p.filter(x => x.offer_id !== offerId)); ok("To'lov tasdiqlandi!"); } catch(e) { fail(e); } setConfirmDlg(null); };
   const manualConfirm= async (offerId) => { try { await operatorAPI.manualConfirm(offerId); setPendingOffers(p => p.filter(x => x.offer_id !== offerId)); ok("Qo'lda tasdiqlandi!"); } catch(e) { fail(e); } setConfirmDlg(null); };
 
+  const togglePay = async (p) => {
+    try {
+      await operatorAPI.togglePayment(p.id);
+      const newStatus = p.status === "pending_payment" ? "active" : "pending_payment";
+      setProds(ps => ps.map(x => x.id === p.id ? { ...x, status: newStatus } : x));
+      ok(newStatus === "active" ? "Faollashtirildi" : "To'lov kutish holatiga qaytarildi");
+    } catch(e) { fail(e); }
+  };
+
+  const editProd = async (id, body) => {
+    try {
+      await operatorAPI.editPost(id, body);
+      setProds(ps => ps.map(x => x.id === id ? { ...x, ...body } : x));
+      setEditTarget(null);
+      ok("Yangilandi");
+    } catch(e) { fail(e); throw e; }
+  };
+
   const addOp    = async (ident) => { try { await operatorAPI.addOperator(ident); setAddOpDlg(false); ok("Operator qo'shildi"); loadTab("operators"); } catch(e) { fail(e); throw e; } };
   const removeOp = async (id)    => { try { await operatorAPI.removeOperator(id); setOperators(p => p.filter(x => x.id !== id)); ok("Olib tashlandi"); } catch(e) { fail(e); } setConfirmDlg(null); };
 
@@ -307,6 +421,7 @@ export default function OperatorPage({ onBack, user }) {
       {depositUser  && <AmountModal title="Pul qo'shish"  Icon={PlusCircle}  iconColor={C.primaryDark} user={depositUser}  onOk={(a) => deposit(depositUser, a)}  onCancel={() => setDepositUser(null)} />}
       {withdrawUser && <AmountModal title="Pul ayirish"   Icon={MinusCircle} iconColor={C.danger}      user={withdrawUser} onOk={(a) => withdraw(withdrawUser, a)} onCancel={() => setWithdrawUser(null)} maxAmount={Number(withdrawUser.balance || 0)} />}
       {addOpDlg     && <AddOpModal onOk={addOp} onCancel={() => setAddOpDlg(false)} />}
+      {editTarget   && <EditPostModal post={editTarget} onOk={(body) => editProd(editTarget.id, body)} onCancel={() => setEditTarget(null)} />}
 
       {/* Header */}
       <div style={{ background:"white", borderBottom:`1px solid ${C.border}`,
@@ -406,8 +521,16 @@ export default function OperatorPage({ onBack, user }) {
                   <div style={{ fontSize:11, color:C.textSub }}>
                     {p.viloyat}{p.tuman?", "+p.tuman:""} · {p.qty} {p.unit}
                   </div>
-                  <div style={{ fontSize:11, color:C.textMuted, marginBottom:10 }}>
+                  <div style={{ fontSize:11, color:C.textMuted }}>
                     {p.ownerName} · {fmtPhone(p.ownerPhone)}{p.ownerTelegram?" · "+p.ownerTelegram:""}
+                  </div>
+                  <div style={{ display:"flex", gap:10, marginTop:3, marginBottom:10 }}>
+                    <span style={{ fontSize:10, color:C.textMuted, display:"flex", alignItems:"center", gap:3 }}>
+                      <Eye size={10} /> {p.view_count || 0} ko'rish
+                    </span>
+                    <span style={{ fontSize:10, color:C.textMuted, display:"flex", alignItems:"center", gap:3 }}>
+                      <Heart size={10} /> {p.like_count || 0} like
+                    </span>
                   </div>
                   <div style={{ display:"flex", gap:8 }}>
                     <Btn color="#28A869" onClick={() => approve(p.id)}>
@@ -498,31 +621,67 @@ export default function OperatorPage({ onBack, user }) {
               <EmptyState Icon={Package} text="Mahsulot topilmadi" />
             ) : prods.map(p => (
               <div key={p.id} style={{ background:"white", borderRadius:12, marginBottom:8,
-                                       border:`1px solid ${C.border}`, padding:"11px 13px",
-                                       display:"flex", alignItems:"center", gap:10 }}>
-                <div style={{ flex:1, minWidth:0 }}>
-                  <div style={{ display:"flex", alignItems:"center", gap:6, marginBottom:2 }}>
-                    <div style={{ fontSize:13, fontWeight:800, color:C.text, overflow:"hidden",
-                                  textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{p.name}</div>
-                    <Badge status={p.status} />
+                                       border:`1px solid ${C.border}`, padding:"11px 13px" }}>
+                <div style={{ display:"flex", alignItems:"flex-start", gap:10 }}>
+                  <div style={{ flex:1, minWidth:0 }}>
+                    <div style={{ display:"flex", alignItems:"center", gap:6, marginBottom:2, flexWrap:"wrap" }}>
+                      <div style={{ fontSize:13, fontWeight:800, color:C.text, overflow:"hidden",
+                                    textOverflow:"ellipsis", whiteSpace:"nowrap", maxWidth:160 }}>{p.name}</div>
+                      <Badge status={p.status} />
+                    </div>
+                    <div style={{ fontSize:11, color:C.textSub }}>{fmtPrice(p.price)} · {p.viloyat}</div>
+                    <div style={{ fontSize:11, color:C.textMuted }}>
+                      {p.owner_name||"Noma'lum"} · {fmtPhone(p.owner_phone)}
+                    </div>
+                    {/* View / Like stats */}
+                    <div style={{ display:"flex", gap:10, marginTop:4 }}>
+                      <span style={{ fontSize:10, color:C.textMuted, display:"flex", alignItems:"center", gap:3 }}>
+                        <Eye size={10} /> {p.view_count || 0}
+                      </span>
+                      <span style={{ fontSize:10, color:C.textMuted, display:"flex", alignItems:"center", gap:3 }}>
+                        <Heart size={10} /> {p.like_count || 0}
+                      </span>
+                    </div>
                   </div>
-                  <div style={{ fontSize:11, color:C.textSub }}>{fmtPrice(p.price)} · {p.viloyat}</div>
-                  <div style={{ fontSize:11, color:C.textMuted }}>
-                    {p.owner_name||"Noma'lum"} · {fmtPhone(p.owner_phone)}
+                  <div style={{ display:"flex", flexDirection:"column", gap:5 }}>
+                    {/* Edit */}
+                    <button onClick={() => setEditTarget(p)}
+                      style={{ padding:"5px 8px", borderRadius:7, border:"none",
+                               background:"#EFF6FF", color:"#2563EB", cursor:"pointer",
+                               display:"flex", alignItems:"center", gap:3, fontSize:10, fontWeight:700 }}>
+                      <Pencil size={12}/> Tahrir
+                    </button>
+                    {/* Toggle payment */}
+                    {(p.status === "pending_payment" || p.status === "active") && (
+                      <button onClick={() => togglePay(p)}
+                        style={{ padding:"5px 8px", borderRadius:7, border:"none",
+                                 background: p.status==="pending_payment" ? "#F0FDF4" : "#FFFBEB",
+                                 color: p.status==="pending_payment" ? "#16A34A" : "#D97706",
+                                 cursor:"pointer", display:"flex", alignItems:"center", gap:3,
+                                 fontSize:10, fontWeight:700 }}>
+                        {p.status==="pending_payment"
+                          ? <><ToggleRight size={12}/> Faol</>
+                          : <><ToggleLeft size={12}/> To'lov</>
+                        }
+                      </button>
+                    )}
+                    {/* Hide/Show */}
+                    <button onClick={() => setConfirmDlg({ type:"hide-prod", d:p })}
+                      style={{ padding:"5px 8px", borderRadius:7, border:"none",
+                               background: p.status==="hidden" ? "#F0FDF4" : "#F3F4F6",
+                               color: p.status==="hidden" ? "#16A34A" : C.textSub,
+                               cursor:"pointer", display:"flex", alignItems:"center", gap:3,
+                               fontSize:10, fontWeight:700 }}>
+                      {p.status==="hidden" ? <><Eye size={12}/> Ko'rsat</> : <><EyeOff size={12}/> Yashir</>}
+                    </button>
+                    {/* Delete */}
+                    <button onClick={() => setConfirmDlg({ type:"del-prod", d:p })}
+                      style={{ padding:"5px 8px", borderRadius:7, border:"none",
+                               background:"#FEF2F2", color:C.danger, cursor:"pointer",
+                               display:"flex", alignItems:"center", gap:3, fontSize:10, fontWeight:700 }}>
+                      <Trash2 size={12}/> O'chir
+                    </button>
                   </div>
-                </div>
-                <div style={{ display:"flex", gap:6 }}>
-                  <button onClick={() => setConfirmDlg({ type:"hide-prod", d:p })}
-                    style={{ padding:"6px 9px", borderRadius:8, border:"none",
-                             background: p.status==="hidden" ? "#F0FDF4" : "#F3F4F6",
-                             color: p.status==="hidden" ? "#16A34A" : C.textSub, cursor:"pointer" }}>
-                    {p.status==="hidden" ? <Eye size={15}/> : <EyeOff size={15}/>}
-                  </button>
-                  <button onClick={() => setConfirmDlg({ type:"del-prod", d:p })}
-                    style={{ padding:"6px 9px", borderRadius:8, border:"none",
-                             background:"#FEF2F2", color:C.danger, cursor:"pointer" }}>
-                    <Trash2 size={15}/>
-                  </button>
                 </div>
               </div>
             ))}
