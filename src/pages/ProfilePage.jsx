@@ -3,11 +3,12 @@ import { Lbl, TInput, BtnPrimary, BtnGhost } from "../components/UI";
 import AvatarUpload from "../components/AvatarUpload";
 import PaymentPage from "./PaymentPage";
 import { C, COND, OPERATOR } from "../constants";
-import { authAPI } from "../services/api";
+import { authAPI, rentalsAPI } from "../services/api";
 import {
   Package, Calendar, Inbox, Trash2,
   Pencil, Check, LogOut, Lock, CreditCard,
   User, Send, MapPin, Wallet, Clock, AlertCircle, CheckCircle, XCircle, Eye,
+  Home, BookOpen, X,
 } from "lucide-react";
 
 function StatusBadge({ status, rejectReason }) {
@@ -35,11 +36,14 @@ function StatusBadge({ status, rejectReason }) {
   );
 }
 
-export default function ProfilePage({ user, setUser, myProducts, offers = [], onDelete, onLogout, isOperator, onOpenOperator }) {
-  const [editMode,  setEditMode]  = useState(false);
-  const [draft,     setDraft]     = useState({ name: user.name, avatar: user.avatar });
-  const [saving,    setSaving]    = useState(false);
-  const [activeTab, setActiveTab] = useState("profile");
+export default function ProfilePage({ user, setUser, myProducts, offers = [],
+  myRentals = [], setMyRentals, myBookings = [], setMyBookings,
+  onDelete, onLogout, isOperator, onOpenOperator }) {
+  const [editMode,    setEditMode]    = useState(false);
+  const [draft,       setDraft]       = useState({ name: user.name, avatar: user.avatar });
+  const [saving,      setSaving]      = useState(false);
+  const [activeTab,   setActiveTab]   = useState("profile");
+  const [cancellingId, setCancellingId] = useState(null);
 
   // Polling orqali user yangilansa, editMode bo'lmasa draft sinxronlansin
   useEffect(() => {
@@ -69,6 +73,15 @@ export default function ProfilePage({ user, setUser, myProducts, offers = [], on
 
   const cancel = () => { setDraft({ name: user.name, avatar: user.avatar }); setEditMode(false); };
 
+  const handleCancelBooking = async (bookingId) => {
+    setCancellingId(bookingId);
+    try {
+      await rentalsAPI.cancelBooking(bookingId);
+      if (setMyBookings) setMyBookings(prev => prev.filter(b => b.id !== bookingId));
+    } catch { /* silent */ }
+    setCancellingId(null);
+  };
+
   const pendingCount  = myProducts.filter(p => p.status === "pending_approval" || p.status === "pending_payment").length;
   const rejectedCount = myProducts.filter(p => p.status === "deleted" && p.rejectedReason).length;
 
@@ -83,19 +96,145 @@ export default function ProfilePage({ user, setUser, myProducts, offers = [], on
                     marginBottom:18, gap:4, border:`1px solid ${C.border}` }}>
         {[
           ["profile", <User size={14}/>, "Profil"],
+          ["rentals", <Home size={14}/>, "Arenda"],
           ["payment", <CreditCard size={14}/>, "To'lovlar"],
         ].map(([tab, icon, lbl]) => (
           <button key={tab} onClick={() => setActiveTab(tab)} style={{
             flex:1, padding:"9px 0", borderRadius:12, border:"none",
-            cursor:"pointer", fontFamily:"inherit", fontSize:12, fontWeight:700, transition:"all .2s",
+            cursor:"pointer", fontFamily:"inherit", fontSize:11, fontWeight:700, transition:"all .2s",
             background: activeTab===tab ? C.primaryDark : "transparent",
             color: activeTab===tab ? "white" : C.textMuted,
-            display:"flex", alignItems:"center", justifyContent:"center", gap:6,
+            display:"flex", alignItems:"center", justifyContent:"center", gap:5,
           }}>{icon} {lbl}</button>
         ))}
       </div>
 
       {activeTab === "payment" && <PaymentPage user={user} embedded />}
+
+      {/* ─── ARENDA TAB ────────────────────────────────────── */}
+      {activeTab === "rentals" && (
+        <div>
+          {/* My rental listings */}
+          <div style={{ display:"flex", alignItems:"center", gap:7, fontSize:14,
+                        fontWeight:800, color:C.text, marginBottom:12 }}>
+            <Home size={16} color="#059669" /> Mening arenda e'lonlarim
+          </div>
+
+          {myRentals.filter(r => r.status !== "deleted").length === 0 ? (
+            <div style={{ textAlign:"center", padding:"24px 16px", color:C.textMuted,
+                          background:C.card, borderRadius:16, border:`1px solid #D1FAE5`,
+                          marginBottom:20 }}>
+              <div style={{ fontSize:28, marginBottom:6 }}>🏠</div>
+              <div style={{ fontSize:13, fontWeight:700 }}>Arenda e'lonlar yo'q</div>
+              <div style={{ fontSize:11, marginTop:3 }}>Bosh sahifada "Arenda" tabida e'lon qo'shing</div>
+            </div>
+          ) : (
+            <div style={{ marginBottom:20 }}>
+              {myRentals.filter(r => r.status !== "deleted").map(r => {
+                const statusColor = r.status === "active" ? "#059669" : r.status === "pending_approval" ? "#D97706" : "#6B7280";
+                const statusBg    = r.status === "active" ? "#D1FAE5" : r.status === "pending_approval" ? "#FEF3C7" : "#F3F4F6";
+                const statusLabel = r.status === "active" ? "Faol" : r.status === "pending_approval" ? "Tekshiruvda" : "Yashirilgan";
+                return (
+                  <div key={r.id} style={{ background:C.card, borderRadius:14, marginBottom:10,
+                                            border:"1px solid #D1FAE5", boxShadow:C.shadow,
+                                            display:"flex", overflow:"hidden", alignItems:"stretch" }}>
+                    <div style={{ width:76, flexShrink:0, background:"#D1FAE5",
+                                  display:"flex", alignItems:"center", justifyContent:"center" }}>
+                      {r.photo
+                        ? <img src={r.photo} alt={r.name} style={{ width:76, height:"100%", objectFit:"cover" }} />
+                        : <Home size={24} color="#6EE7B7" />
+                      }
+                    </div>
+                    <div style={{ flex:1, padding:"10px 12px", minWidth:0 }}>
+                      <div style={{ fontSize:13, fontWeight:800, color:C.text, overflow:"hidden",
+                                    textOverflow:"ellipsis", whiteSpace:"nowrap", marginBottom:2 }}>{r.name}</div>
+                      <div style={{ fontSize:12, fontWeight:700, color:"#059669", marginBottom:4 }}>
+                        {Number(r.pricePerDay).toLocaleString()} so'm/kun
+                      </div>
+                      <div style={{ display:"flex", gap:6, alignItems:"center", flexWrap:"wrap" }}>
+                        <span style={{ fontSize:9, fontWeight:700, padding:"2px 7px", borderRadius:7,
+                                       background:statusBg, color:statusColor }}>● {statusLabel}</span>
+                        <span style={{ fontSize:9, color:C.textMuted }}>
+                          <MapPin size={9} style={{ verticalAlign:"middle" }} /> {r.tuman||r.viloyat}
+                        </span>
+                        <span style={{ fontSize:9, color:C.textMuted, display:"flex", alignItems:"center", gap:2 }}>
+                          <Eye size={9} /> {r.viewCount || 0}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* My bookings as renter */}
+          <div style={{ display:"flex", alignItems:"center", gap:7, fontSize:14,
+                        fontWeight:800, color:C.text, marginBottom:12 }}>
+            <BookOpen size={16} color={C.primaryDark} /> Mening bronlarim
+          </div>
+
+          {myBookings.length === 0 ? (
+            <div style={{ textAlign:"center", padding:"24px 16px", color:C.textMuted,
+                          background:C.card, borderRadius:16, border:`1px solid ${C.border}` }}>
+              <div style={{ fontSize:28, marginBottom:6 }}>📅</div>
+              <div style={{ fontSize:13, fontWeight:700 }}>Hali bronlar yo'q</div>
+              <div style={{ fontSize:11, marginTop:3 }}>Arenda buyumlarini kalandarda bronlang</div>
+            </div>
+          ) : (
+            myBookings.map(b => {
+              const isFuture = b.startDate > new Date().toISOString().slice(0,10);
+              return (
+                <div key={b.id} style={{ background:C.card, borderRadius:14, marginBottom:10,
+                                          border:"1px solid #D1FAE5", boxShadow:C.shadow,
+                                          padding:"12px 14px" }}>
+                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:6 }}>
+                    <div style={{ fontSize:13, fontWeight:800, color:C.text, flex:1 }}>{b.rentalName}</div>
+                    <span style={{ fontSize:9, padding:"2px 7px", borderRadius:7, fontWeight:700,
+                                   background: b.status === "confirmed" ? "#D1FAE5" : "#FEF2F2",
+                                   color: b.status === "confirmed" ? "#059669" : "#EF4444" }}>
+                      {b.status === "confirmed" ? "✓ Tasdiqlangan" : "Bekor"}
+                    </span>
+                  </div>
+                  <div style={{ display:"flex", gap:10, fontSize:11, color:C.textSub, marginBottom:6, flexWrap:"wrap" }}>
+                    <span>📅 {b.startDate} → {b.endDate}</span>
+                    <span>📆 {b.totalDays} kun</span>
+                  </div>
+                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                    <div>
+                      <div style={{ fontSize:13, fontWeight:900, color:"#059669" }}>
+                        {Number(b.totalPrice).toLocaleString()} so'm
+                      </div>
+                      <div style={{ fontSize:9, color:C.textMuted }}>
+                        Xizmat haqi (5%): {Number(b.fee).toLocaleString()} so'm
+                      </div>
+                    </div>
+                    {isFuture && b.status === "confirmed" && (
+                      <button
+                        onClick={() => handleCancelBooking(b.id)}
+                        disabled={cancellingId === b.id}
+                        style={{ padding:"6px 12px", borderRadius:8, border:"none",
+                                 background:"#FEF2F2", color:"#EF4444",
+                                 fontSize:11, fontWeight:700, cursor:"pointer",
+                                 display:"flex", alignItems:"center", gap:4 }}>
+                        {cancellingId === b.id ? "..." : <><X size={11}/> Bekor</>}
+                      </button>
+                    )}
+                  </div>
+                  {b.ownerName && (
+                    <div style={{ fontSize:10, color:C.textMuted, marginTop:6, borderTop:"1px solid #F0FDF4",
+                                  paddingTop:6 }}>
+                      Egasi: {b.ownerName} {b.ownerPhone ? `· +998 ${b.ownerPhone}` : ""}
+                      {b.ownerTelegram ? ` · ${b.ownerTelegram}` : ""}
+                    </div>
+                  )}
+                </div>
+              );
+            })
+          )}
+          <div style={{ height:16 }} />
+        </div>
+      )}
 
       {activeTab === "profile" && <>
 

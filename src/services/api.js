@@ -128,6 +128,29 @@ export const operatorAPI = {
   editPost: (id, body) =>
     apiFetch(`${BASE}/operator/posts/${id}/edit`, { method: "PUT", headers: headers(), body: JSON.stringify(body) }).then(handle),
 
+  // Arenda management
+  getRentals: (q = "", status = "") => {
+    const p = new URLSearchParams(); if (q) p.set("q", q); if (status) p.set("status", status);
+    const qs = p.toString();
+    return apiFetch(`${BASE}/operator/rentals${qs ? "?" + qs : ""}`, { headers: headers() }).then(handle);
+  },
+  approveRental: (id) =>
+    apiFetch(`${BASE}/operator/rentals/${id}/approve`, { method: "PUT", headers: headers() }).then(handle),
+  rejectRental: (id) =>
+    apiFetch(`${BASE}/operator/rentals/${id}/reject`, { method: "PUT", headers: headers() }).then(handle),
+  hideRental: (id) =>
+    apiFetch(`${BASE}/operator/rentals/${id}/hide`, { method: "PUT", headers: headers() }).then(handle),
+  showRental: (id) =>
+    apiFetch(`${BASE}/operator/rentals/${id}/show`, { method: "PUT", headers: headers() }).then(handle),
+  editRental: (id, body) =>
+    apiFetch(`${BASE}/operator/rentals/${id}/edit`, { method: "PUT", headers: headers(), body: JSON.stringify(body) }).then(handle),
+  deleteRental: (id) =>
+    apiFetch(`${BASE}/operator/rentals/${id}`, { method: "DELETE", headers: headers() }).then(handle),
+  getRentalBookings: () =>
+    apiFetch(`${BASE}/operator/rental-bookings`, { headers: headers() }).then(handle),
+  cancelRentalBooking: (id) =>
+    apiFetch(`${BASE}/operator/rental-bookings/${id}`, { method: "DELETE", headers: headers() }).then(handle),
+
   // Legacy
   setUserBlocked: (id, blocked) =>
     blocked ? operatorAPI.blockUser(id) : operatorAPI.unblockUser(id),
@@ -172,6 +195,34 @@ export const offersAPI = {
     apiFetch(`${BASE}/offers/${id}/paid`, { method: "PUT", headers: headers() }).then(handle),
   cancel: (id) =>
     apiFetch(`${BASE}/offers/${id}`, { method: "DELETE", headers: headers() }).then(handle),
+};
+
+// ─── RENTALS ──────────────────────────────────────────────────────
+export const rentalsAPI = {
+  getAll: (params = {}) => {
+    const qs = new URLSearchParams(
+      Object.fromEntries(Object.entries(params).filter(([, v]) => v))
+    ).toString();
+    return apiFetch(`${BASE}/rentals${qs ? "?" + qs : ""}`, { headers: headers() }).then(handle);
+  },
+  getMy: () =>
+    apiFetch(`${BASE}/rentals/my`, { headers: headers() }).then(handle),
+  getMyBookings: () =>
+    apiFetch(`${BASE}/rentals/my-bookings`, { headers: headers() }).then(handle),
+  getById: (id) =>
+    apiFetch(`${BASE}/rentals/${id}`, { headers: headers() }).then(handle),
+  getBookedDates: (id) =>
+    apiFetch(`${BASE}/rentals/${id}/booked-dates`, { headers: headers() }).then(handle),
+  create: (body) =>
+    apiFetch(`${BASE}/rentals`, { method: "POST", headers: headers(), body: JSON.stringify(body) }).then(handle),
+  update: (id, body) =>
+    apiFetch(`${BASE}/rentals/${id}`, { method: "PUT", headers: headers(), body: JSON.stringify(body) }).then(handle),
+  remove: (id) =>
+    apiFetch(`${BASE}/rentals/${id}`, { method: "DELETE", headers: headers() }).then(handle),
+  book: (id, body) =>
+    apiFetch(`${BASE}/rentals/${id}/book`, { method: "POST", headers: headers(), body: JSON.stringify(body) }).then(handle),
+  cancelBooking: (bookingId) =>
+    apiFetch(`${BASE}/rentals/bookings/${bookingId}`, { method: "DELETE", headers: headers() }).then(handle),
 };
 
 // ─── PAYMENTS ─────────────────────────────────────────────────────

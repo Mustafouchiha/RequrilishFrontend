@@ -8,6 +8,7 @@ import {
   AlertTriangle, RefreshCw, PlusCircle, MinusCircle,
   Shield, UserPlus, UserMinus, Wallet, Clock,
   Pencil, ToggleLeft, ToggleRight, Heart,
+  Home, Calendar, BookOpen,
 } from "lucide-react";
 
 const phoneCore = (v) => String(v || "").replace(/\D/g, "").slice(-9);
@@ -275,6 +276,7 @@ const TABS = [
   { key:"approval",  Icon:CheckSquare, label:"Tasdiqlash" },
   { key:"users",     Icon:Users,       label:"Foydalanuvchi" },
   { key:"products",  Icon:Package,     label:"Mahsulot" },
+  { key:"rentals",   Icon:Home,        label:"Arenda" },
   { key:"payments",  Icon:CreditCard,  label:"To'lov" },
   { key:"operators", Icon:Shield,      label:"Operator" },
 ];
@@ -294,16 +296,21 @@ export default function OperatorPage({ onBack, user }) {
   const [addOpDlg,     setAddOpDlg]     = useState(false);
   const [editTarget,   setEditTarget]   = useState(null);
 
-  const [pending,      setPending]      = useState([]);
-  const [users,        setUsers]        = useState([]);
-  const [userQ,        setUserQ]        = useState("");
-  const [prods,        setProds]        = useState([]);
-  const [prodQ,        setProdQ]        = useState("");
-  const [prodStatus,   setProdStatus]   = useState("");
-  const [payments,     setPayments]     = useState([]);
-  const [pendingOffers,setPendingOffers]= useState([]);
-  const [operators,    setOperators]    = useState([]);
-  const [stats,        setStats]        = useState(null);
+  const [pending,        setPending]        = useState([]);
+  const [users,          setUsers]          = useState([]);
+  const [userQ,          setUserQ]          = useState("");
+  const [prods,          setProds]          = useState([]);
+  const [prodQ,          setProdQ]          = useState("");
+  const [prodStatus,     setProdStatus]     = useState("");
+  const [payments,       setPayments]       = useState([]);
+  const [pendingOffers,  setPendingOffers]  = useState([]);
+  const [operators,      setOperators]      = useState([]);
+  const [stats,          setStats]          = useState(null);
+  const [rentals,        setRentals]        = useState([]);
+  const [rentalQ,        setRentalQ]        = useState("");
+  const [rentalStatus,   setRentalStatus]   = useState("");
+  const [rentalBookings, setRentalBookings] = useState([]);
+  const [rentalSubTab,   setRentalSubTab]   = useState("listings"); // "listings" | "bookings"
 
   const toast$ = (msg) => { setToast(msg); setTimeout(() => setToast(""), 2800); };
   const ok  = (msg) => toast$("✓ " + msg);
@@ -322,6 +329,12 @@ export default function OperatorPage({ onBack, user }) {
         setUsers(await operatorAPI.getUsers(userQ));
       } else if (t === "products") {
         setProds(await operatorAPI.getProducts(prodQ, prodStatus));
+      } else if (t === "rentals") {
+        const [rents, bookings] = await Promise.all([
+          operatorAPI.getRentals(rentalQ, rentalStatus).catch(() => []),
+          operatorAPI.getRentalBookings().catch(() => []),
+        ]);
+        setRentals(rents); setRentalBookings(bookings);
       } else if (t === "payments") {
         const [pays, offs] = await Promise.all([
           operatorAPI.getPayments(),
@@ -333,7 +346,7 @@ export default function OperatorPage({ onBack, user }) {
       }
     } catch (e) { setErr(e.message); }
     finally { setLoading(false); }
-  }, [tab, userQ, prodQ, prodStatus]);
+  }, [tab, userQ, prodQ, prodStatus, rentalQ, rentalStatus]);
 
   useEffect(() => { loadTab(tab); }, [tab]);
 
@@ -393,6 +406,37 @@ export default function OperatorPage({ onBack, user }) {
   const addOp    = async (ident) => { try { await operatorAPI.addOperator(ident); setAddOpDlg(false); ok("Operator qo'shildi"); loadTab("operators"); } catch(e) { fail(e); throw e; } };
   const removeOp = async (id)    => { try { await operatorAPI.removeOperator(id); setOperators(p => p.filter(x => x.id !== id)); ok("Olib tashlandi"); } catch(e) { fail(e); } setConfirmDlg(null); };
 
+  /* ── Rental actions ──────────────────────────────────────── */
+  const approveRental = async (id) => {
+    try { await operatorAPI.approveRental(id); setRentals(ps => ps.map(x => x.id === id ? { ...x, status:"active" } : x)); ok("Tasdiqlandi"); }
+    catch(e) { fail(e); }
+  };
+  const rejectRental = async (id) => {
+    try { await operatorAPI.rejectRental(id); setRentals(ps => ps.filter(x => x.id !== id)); ok("Rad etildi"); }
+    catch(e) { fail(e); }
+    setConfirmDlg(null);
+  };
+  const hideShowRental = async (r) => {
+    try {
+      if (r.status === "hidden") { await operatorAPI.showRental(r.id); setRentals(ps => ps.map(x => x.id === r.id ? { ...x, status:"active" } : x)); ok("Ko'rsatildi"); }
+      else                       { await operatorAPI.hideRental(r.id); setRentals(ps => ps.map(x => x.id === r.id ? { ...x, status:"hidden" } : x)); ok("Yashirildi"); }
+    } catch(e) { fail(e); }
+    setConfirmDlg(null);
+  };
+  const deleteRental = async (id) => {
+    try { await operatorAPI.deleteRental(id); setRentals(ps => ps.filter(x => x.id !== id)); ok("O'chirildi"); }
+    catch(e) { fail(e); }
+    setConfirmDlg(null);
+  };
+  const cancelRentalBooking = async (id) => {
+    try {
+      await operatorAPI.cancelRentalBooking(id);
+      setRentalBookings(ps => ps.filter(x => x.id !== id));
+      ok("Bron bekor qilindi, hisobi qaytarildi");
+    } catch(e) { fail(e); }
+    setConfirmDlg(null);
+  };
+
   /* ── Render ──────────────────────────────────────────── */
   return (
     <div style={{ minHeight:"100vh", background:"#F8F9FA", maxWidth:430, margin:"0 auto",
@@ -410,13 +454,17 @@ export default function OperatorPage({ onBack, user }) {
       )}
 
       {/* Modals */}
-      {confirmDlg?.type === "del-user"     && <Confirm title="Foydalanuvchini o'chirish" msg={`"${confirmDlg.d.name}" ni o'chirasizmi?`} onOk={() => delUser(confirmDlg.d.id)} onCancel={() => setConfirmDlg(null)} />}
-      {confirmDlg?.type === "block-user"   && <Confirm title={confirmDlg.d.is_blocked ? "Blokni ochish" : "Bloklash"} msg={`${confirmDlg.d.name}?`} okColor={confirmDlg.d.is_blocked ? C.primaryDark : C.danger} onOk={() => block(confirmDlg.d)} onCancel={() => setConfirmDlg(null)} />}
-      {confirmDlg?.type === "del-prod"     && <Confirm title="Mahsulotni o'chirish" msg={`"${confirmDlg.d.name}"?`} onOk={() => delProd(confirmDlg.d.id)} onCancel={() => setConfirmDlg(null)} />}
-      {confirmDlg?.type === "hide-prod"    && <Confirm title={confirmDlg.d.status==="hidden"?"Ko'rsatish":"Yashirish"} msg={`"${confirmDlg.d.name}"?`} okColor={confirmDlg.d.status==="hidden"?C.primaryDark:C.danger} onOk={() => hideShow(confirmDlg.d)} onCancel={() => setConfirmDlg(null)} />}
-      {confirmDlg?.type === "confirm-pay"  && <Confirm title="To'lovni tasdiqlash" msg={`${confirmDlg.d.buyer_name} — ${fmtPrice(confirmDlg.d.amount)}`} okColor={C.primaryDark} onOk={() => confirmPay(confirmDlg.d.offer_id)} onCancel={() => setConfirmDlg(null)} />}
-      {confirmDlg?.type === "manual-pay"   && <Confirm title="Qo'lda tasdiqlash" msg={`${confirmDlg.d.buyer_name} → ${confirmDlg.d.product_name} (${fmtPrice(confirmDlg.d.product_price)})`} okColor={C.primaryDark} onOk={() => manualConfirm(confirmDlg.d.offer_id)} onCancel={() => setConfirmDlg(null)} />}
-      {confirmDlg?.type === "rem-op"       && <Confirm title="Operatorni o'chirish" msg={`"${confirmDlg.d.name}"?`} onOk={() => removeOp(confirmDlg.d.id)} onCancel={() => setConfirmDlg(null)} />}
+      {confirmDlg?.type === "del-user"        && <Confirm title="Foydalanuvchini o'chirish" msg={`"${confirmDlg.d.name}" ni o'chirasizmi?`} onOk={() => delUser(confirmDlg.d.id)} onCancel={() => setConfirmDlg(null)} />}
+      {confirmDlg?.type === "block-user"      && <Confirm title={confirmDlg.d.is_blocked ? "Blokni ochish" : "Bloklash"} msg={`${confirmDlg.d.name}?`} okColor={confirmDlg.d.is_blocked ? C.primaryDark : C.danger} onOk={() => block(confirmDlg.d)} onCancel={() => setConfirmDlg(null)} />}
+      {confirmDlg?.type === "del-prod"        && <Confirm title="Mahsulotni o'chirish" msg={`"${confirmDlg.d.name}"?`} onOk={() => delProd(confirmDlg.d.id)} onCancel={() => setConfirmDlg(null)} />}
+      {confirmDlg?.type === "hide-prod"       && <Confirm title={confirmDlg.d.status==="hidden"?"Ko'rsatish":"Yashirish"} msg={`"${confirmDlg.d.name}"?`} okColor={confirmDlg.d.status==="hidden"?C.primaryDark:C.danger} onOk={() => hideShow(confirmDlg.d)} onCancel={() => setConfirmDlg(null)} />}
+      {confirmDlg?.type === "confirm-pay"     && <Confirm title="To'lovni tasdiqlash" msg={`${confirmDlg.d.buyer_name} — ${fmtPrice(confirmDlg.d.amount)}`} okColor={C.primaryDark} onOk={() => confirmPay(confirmDlg.d.offer_id)} onCancel={() => setConfirmDlg(null)} />}
+      {confirmDlg?.type === "manual-pay"      && <Confirm title="Qo'lda tasdiqlash" msg={`${confirmDlg.d.buyer_name} → ${confirmDlg.d.product_name} (${fmtPrice(confirmDlg.d.product_price)})`} okColor={C.primaryDark} onOk={() => manualConfirm(confirmDlg.d.offer_id)} onCancel={() => setConfirmDlg(null)} />}
+      {confirmDlg?.type === "rem-op"          && <Confirm title="Operatorni o'chirish" msg={`"${confirmDlg.d.name}"?`} onOk={() => removeOp(confirmDlg.d.id)} onCancel={() => setConfirmDlg(null)} />}
+      {confirmDlg?.type === "del-rental"      && <Confirm title="Arendani o'chirish" msg={`"${confirmDlg.d.name}"?`} onOk={() => deleteRental(confirmDlg.d.id)} onCancel={() => setConfirmDlg(null)} />}
+      {confirmDlg?.type === "hide-rental"     && <Confirm title={confirmDlg.d.status==="hidden"?"Ko'rsatish":"Yashirish"} msg={`"${confirmDlg.d.name}"?`} okColor={confirmDlg.d.status==="hidden"?C.primaryDark:C.danger} onOk={() => hideShowRental(confirmDlg.d)} onCancel={() => setConfirmDlg(null)} />}
+      {confirmDlg?.type === "reject-rental"   && <Confirm title="Rad etish" msg={`"${confirmDlg.d.name}"?`} onOk={() => rejectRental(confirmDlg.d.id)} onCancel={() => setConfirmDlg(null)} />}
+      {confirmDlg?.type === "cancel-booking"  && <Confirm title="Bronni bekor qilish" msg={`${confirmDlg.d.renter_name} bronini bekor qilasizmi? To'lov qaytariladi.`} onOk={() => cancelRentalBooking(confirmDlg.d.id)} onCancel={() => setConfirmDlg(null)} />}
       {rejectTarget && <RejectModal onOk={(r) => reject(rejectTarget, r)} onCancel={() => setRejectTarget(null)} />}
       {depositUser  && <AmountModal title="Pul qo'shish"  Icon={PlusCircle}  iconColor={C.primaryDark} user={depositUser}  onOk={(a) => deposit(depositUser, a)}  onCancel={() => setDepositUser(null)} />}
       {withdrawUser && <AmountModal title="Pul ayirish"   Icon={MinusCircle} iconColor={C.danger}      user={withdrawUser} onOk={(a) => withdraw(withdrawUser, a)} onCancel={() => setWithdrawUser(null)} maxAmount={Number(withdrawUser.balance || 0)} />}
@@ -685,6 +733,150 @@ export default function OperatorPage({ onBack, user }) {
                 </div>
               </div>
             ))}
+          </div>
+        )}
+
+        {/* ── ARENDA ─────────────────────────────────── */}
+        {!loading && tab === "rentals" && (
+          <div>
+            {/* Sub-tabs */}
+            <div style={{ display:"flex", background:"white", borderRadius:12, padding:3,
+                          marginBottom:12, gap:3, border:`1px solid ${C.border}` }}>
+              {[["listings","🏠 E'lonlar"], ["bookings","📅 Bronlar"]].map(([key, lbl]) => (
+                <button key={key} onClick={() => setRentalSubTab(key)} style={{
+                  flex:1, padding:"7px 0", borderRadius:9, border:"none", cursor:"pointer",
+                  fontFamily:"inherit", fontSize:11, fontWeight:700,
+                  background: rentalSubTab===key ? "#059669" : "transparent",
+                  color: rentalSubTab===key ? "white" : C.textMuted,
+                }}>{lbl}</button>
+              ))}
+            </div>
+
+            {/* ── Rental listings ── */}
+            {rentalSubTab === "listings" && (
+              <div>
+                <div style={{ display:"flex", gap:8, marginBottom:10 }}>
+                  <SearchBar value={rentalQ} onChange={setRentalQ} onSearch={() => loadTab("rentals")} flex />
+                  <select value={rentalStatus}
+                    onChange={e => { setRentalStatus(e.target.value); loadTab("rentals"); }}
+                    style={{ padding:"8px 8px", borderRadius:10, border:`1.5px solid ${C.border}`,
+                             fontSize:11, background:"white", color:C.text, cursor:"pointer" }}>
+                    <option value="">Barchasi</option>
+                    <option value="active">Faol</option>
+                    <option value="pending_approval">Tekshiruvda</option>
+                    <option value="hidden">Yashirilgan</option>
+                  </select>
+                </div>
+                {rentals.length === 0 ? (
+                  <EmptyState Icon={Home} text="Arenda e'lonlar yo'q" />
+                ) : rentals.map(r => (
+                  <div key={r.id} style={{ background:"white", borderRadius:12, marginBottom:8,
+                                           border:`1px solid ${r.status==="pending_approval"?"#FDE68A":"#D1FAE5"}`,
+                                           padding:"11px 13px" }}>
+                    <div style={{ display:"flex", alignItems:"flex-start", gap:10 }}>
+                      <div style={{ flex:1, minWidth:0 }}>
+                        <div style={{ display:"flex", alignItems:"center", gap:6, marginBottom:2, flexWrap:"wrap" }}>
+                          <div style={{ fontSize:13, fontWeight:800, color:C.text, overflow:"hidden",
+                                        textOverflow:"ellipsis", whiteSpace:"nowrap", maxWidth:160 }}>{r.name}</div>
+                          <Badge status={r.status} />
+                        </div>
+                        <div style={{ fontSize:11, color:"#059669", fontWeight:700 }}>
+                          {fmtPrice(r.price_per_day)} / kun
+                        </div>
+                        <div style={{ fontSize:11, color:C.textSub }}>{r.viloyat}{r.tuman?`, ${r.tuman}`:""}</div>
+                        <div style={{ fontSize:11, color:C.textMuted }}>
+                          {r.owner_name||"—"} · {fmtPhone(r.owner_phone)}
+                        </div>
+                        <div style={{ display:"flex", gap:10, marginTop:3 }}>
+                          <span style={{ fontSize:10, color:C.textMuted, display:"flex", alignItems:"center", gap:2 }}>
+                            <Eye size={10} /> {r.view_count || 0}
+                          </span>
+                          <span style={{ fontSize:10, color:C.textMuted }}>
+                            🗂 {r.category}
+                          </span>
+                        </div>
+                      </div>
+                      <div style={{ display:"flex", flexDirection:"column", gap:5 }}>
+                        {r.status === "pending_approval" && (
+                          <>
+                            <button onClick={() => approveRental(r.id)}
+                              style={{ padding:"5px 8px", borderRadius:7, border:"none",
+                                       background:"#D1FAE5", color:"#059669", cursor:"pointer",
+                                       fontSize:10, fontWeight:700, display:"flex", alignItems:"center", gap:3 }}>
+                              <CheckCircle size={12}/> Tasdiqlash
+                            </button>
+                            <button onClick={() => setConfirmDlg({ type:"reject-rental", d:r })}
+                              style={{ padding:"5px 8px", borderRadius:7, border:"none",
+                                       background:"#FEF2F2", color:C.danger, cursor:"pointer",
+                                       fontSize:10, fontWeight:700, display:"flex", alignItems:"center", gap:3 }}>
+                              <XCircle size={12}/> Rad et
+                            </button>
+                          </>
+                        )}
+                        <button onClick={() => setConfirmDlg({ type:"hide-rental", d:r })}
+                          style={{ padding:"5px 8px", borderRadius:7, border:"none",
+                                   background: r.status==="hidden" ? "#D1FAE5" : "#F3F4F6",
+                                   color: r.status==="hidden" ? "#059669" : C.textSub,
+                                   cursor:"pointer", fontSize:10, fontWeight:700,
+                                   display:"flex", alignItems:"center", gap:3 }}>
+                          {r.status==="hidden" ? <><Eye size={12}/> Ko'rsat</> : <><EyeOff size={12}/> Yashir</>}
+                        </button>
+                        <button onClick={() => setConfirmDlg({ type:"del-rental", d:r })}
+                          style={{ padding:"5px 8px", borderRadius:7, border:"none",
+                                   background:"#FEF2F2", color:C.danger, cursor:"pointer",
+                                   fontSize:10, fontWeight:700, display:"flex", alignItems:"center", gap:3 }}>
+                          <Trash2 size={12}/> O'chir
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* ── Rental bookings ── */}
+            {rentalSubTab === "bookings" && (
+              <div>
+                {rentalBookings.length === 0 ? (
+                  <EmptyState Icon={Calendar} text="Hali bronlar yo'q" />
+                ) : rentalBookings.map(b => (
+                  <div key={b.id} style={{ background:"white", borderRadius:12, marginBottom:8,
+                                           border:"1px solid #D1FAE5", padding:"11px 13px" }}>
+                    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:4 }}>
+                      <div style={{ fontSize:13, fontWeight:800, color:C.text, flex:1 }}>{b.rental_name}</div>
+                      <span style={{ fontSize:9, padding:"2px 7px", borderRadius:6, fontWeight:700,
+                                     background: b.status==="confirmed" ? "#D1FAE5" : "#FEF2F2",
+                                     color: b.status==="confirmed" ? "#059669" : C.danger }}>
+                        {b.status==="confirmed" ? "✓ Tasdiqlangan" : "Bekor"}
+                      </span>
+                    </div>
+                    <div style={{ fontSize:11, color:C.textSub, marginBottom:3 }}>
+                      📅 {b.start_date} → {b.end_date} ({b.total_days} kun)
+                    </div>
+                    <div style={{ fontSize:12, fontWeight:700, color:"#059669", marginBottom:3 }}>
+                      {fmtPrice(b.total_price)}
+                      <span style={{ fontSize:10, fontWeight:400, color:C.textMuted, marginLeft:6 }}>
+                        Xizmat haqi: {fmtPrice(b.fee)}
+                      </span>
+                    </div>
+                    <div style={{ fontSize:11, color:C.textMuted }}>
+                      Ijarachi: {b.renter_name} · {fmtPhone(b.renter_phone)}
+                    </div>
+                    <div style={{ fontSize:11, color:C.textMuted, marginBottom:6 }}>
+                      Egasi: {b.owner_name} · {fmtPhone(b.owner_phone)}
+                    </div>
+                    {b.status === "confirmed" && (
+                      <button onClick={() => setConfirmDlg({ type:"cancel-booking", d:b })}
+                        style={{ padding:"6px 12px", borderRadius:8, border:"none",
+                                 background:"#FEF2F2", color:C.danger, fontSize:11, fontWeight:700,
+                                 cursor:"pointer", display:"flex", alignItems:"center", gap:4 }}>
+                        <XCircle size={12}/> Bekor qilish
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 

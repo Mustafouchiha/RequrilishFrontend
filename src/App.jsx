@@ -4,7 +4,7 @@ import HomePage from "./pages/HomePage";
 import ProfilePage from "./pages/ProfilePage";
 import OperatorPage from "./pages/OperatorPage";
 import { C } from "./constants";
-import { getToken, setToken, clearAuth, productsAPI, offersAPI, authAPI, ping } from "./services/api";
+import { getToken, setToken, clearAuth, productsAPI, offersAPI, authAPI, ping, rentalsAPI } from "./services/api";
 import { Home, Plus } from "lucide-react";
 
 const OPERATOR_PHONES = ["331350206"];
@@ -67,6 +67,9 @@ export default function App() {
   const [myProducts,  setMyProducts]  = useState([]);
   const [offers,      setOffers]      = useState([]);
   const [sentOffers,  setSentOffers]  = useState([]);
+  const [rentals,     setRentals]     = useState([]);
+  const [myRentals,   setMyRentals]   = useState([]);
+  const [myBookings,  setMyBookings]  = useState([]);
   const [homeAction,  setHomeAction]  = useState(null);
   const [loading,     setLoading]     = useState(false);
   const [offline,     setOffline]     = useState(false);
@@ -77,22 +80,32 @@ export default function App() {
 
   const loadData = async () => {
     try {
-      const prods = await productsAPI.getAll();
+      const [prods, rents] = await Promise.all([
+        productsAPI.getAll(),
+        rentalsAPI.getAll().catch(() => []),
+      ]);
       setOffline(false);
       setProducts(prods);
+      setRentals(rents);
       if (getToken()) {
-        const [my, offs, sent] = await Promise.all([
+        const [my, offs, sent, myR, myB] = await Promise.all([
           productsAPI.getMy(),
           offersAPI.getReceived(),
           offersAPI.getSent().catch(() => []),
+          rentalsAPI.getMy().catch(() => []),
+          rentalsAPI.getMyBookings().catch(() => []),
         ]);
         setMyProducts(my);
         setOffers(offs);
         setSentOffers(sent);
+        setMyRentals(myR);
+        setMyBookings(myB);
       } else {
         setMyProducts([]);
         setOffers([]);
         setSentOffers([]);
+        setMyRentals([]);
+        setMyBookings([]);
       }
     } catch (e) {
       if (e.offline) setOffline(true);
@@ -198,8 +211,14 @@ export default function App() {
     setUser(null);
     setMyProducts([]);
     setOffers([]);
+    setSentOffers([]);
+    setMyRentals([]);
+    setMyBookings([]);
     setNav("home");
-    try { setProducts(await productsAPI.getAll()); } catch { /* silent */ }
+    try {
+      const [prods, rents] = await Promise.all([productsAPI.getAll(), rentalsAPI.getAll().catch(()=>[])]);
+      setProducts(prods); setRentals(rents);
+    } catch { /* silent */ }
   };
 
   const handleAddProduct = (newProd) => {
@@ -314,6 +333,7 @@ export default function App() {
           user={guestUser} products={products} setProducts={setProducts}
           offers={offers} setOffers={setOffers}
           sentOffers={sentOffers} setSentOffers={setSentOffers}
+          rentals={rentals} setRentals={setRentals}
           onNavChange={setNav} homeAction={homeAction} setHomeAction={setHomeAction}
           onProductAdded={handleAddProduct} loggedIn={false}
           onRequireAuth={() => setNav("login")}
@@ -334,6 +354,8 @@ export default function App() {
           <ProfilePage
             user={user} setUser={handleUpdateUser}
             myProducts={myProducts} offers={offers}
+            myRentals={myRentals} setMyRentals={setMyRentals}
+            myBookings={myBookings} setMyBookings={setMyBookings}
             onDelete={handleDeleteProduct}
             onLogout={handleLogout} isOperator={isOperator(user)}
             onOpenOperator={() => setNav("operator")}
@@ -349,6 +371,7 @@ export default function App() {
             user={user} products={products} setProducts={setProducts}
             offers={offers} setOffers={setOffers}
             sentOffers={sentOffers} setSentOffers={setSentOffers}
+            rentals={rentals} setRentals={setRentals}
             onNavChange={setNav} homeAction={homeAction} setHomeAction={setHomeAction}
             onProductAdded={handleAddProduct} onDelete={handleDeleteProduct}
             isOperator={isOperator(user)} loggedIn={true}

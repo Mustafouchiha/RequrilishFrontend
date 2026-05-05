@@ -1,11 +1,13 @@
 import { useState, useEffect, useRef } from "react";
 import { Pill, BtnPrimary, BtnGhost, Sheet, Lbl, TInput } from "../components/UI";
 import PCard from "../components/ProductCard";
+import RentalCard from "../components/RentalCard";
+import BookingCalendar from "../components/BookingCalendar";
 import LocIcon from "../components/LocIcon";
 import PhotoUpload from "../components/PhotoUpload";
 import StepBar from "../components/StepBar";
-import { C, COND, UZ, CATS, CAT_ICO, EMPTY_FORM, OPERATOR } from "../constants";
-import { productsAPI, offersAPI, paymentsAPI, authAPI } from "../services/api";
+import { C, COND, UZ, CATS, CAT_ICO, EMPTY_FORM, OPERATOR, RENTAL_CATS, RENTAL_CAT_ICO, EMPTY_RENTAL_FORM } from "../constants";
+import { productsAPI, offersAPI, paymentsAPI, authAPI, rentalsAPI } from "../services/api";
 import Logo from "../components/Logo";
 import {
   Bell, Lock, Search, SearchX, Image as ImageIcon,
@@ -19,6 +21,7 @@ import {
 export default function HomePage({
   user, products, setProducts, offers, setOffers,
   sentOffers = [], setSentOffers,
+  rentals = [], setRentals,
   onNavChange, homeAction, setHomeAction,
   onProductAdded, onDelete, isOperator = false, loggedIn, onRequireAuth,
 }) {
@@ -31,6 +34,21 @@ export default function HomePage({
   const [balancePaying, setBalancePaying] = useState(false);
   const [note,        setNote]        = useState("");
   const [notifTab,    setNotifTab]    = useState("received");
+  const [mainTab,     setMainTab]     = useState("sotuvda");
+
+  // Rental state
+  const [selectedRental,   setSelectedRental]   = useState(null);
+  const [bookedDates,      setBookedDates]       = useState([]);
+  const [bookingStart,     setBookingStart]      = useState(null);
+  const [bookingEnd,       setBookingEnd]        = useState(null);
+  const [bookingNote,      setBookingNote]       = useState("");
+  const [bookingLoading,   setBookingLoading]    = useState(false);
+  const [showAddRental,    setShowAddRental]     = useState(false);
+  const [rentalForm,       setRentalForm]        = useState(EMPTY_RENTAL_FORM || {});
+  const [rentalStep,       setRentalStep]        = useState(1);
+  const [rentalSubmitting, setRentalSubmitting]  = useState(false);
+  const [activRentalCats,  setActivRentalCats]   = useState([]);
+
   const [showLoc,     setShowLoc]     = useState(false);
   const [fVil,        setFVil]        = useState("");
   const [fTum,        setFTum]        = useState("");
@@ -126,7 +144,7 @@ export default function HomePage({
     if (homeAction === "openAdd") { openAdd(); setHomeAction(null); }
   }, [homeAction]);
 
-  const anySheetOpen = showLoc || !!selected || showOffer || showNotifs || !!showPayment || showAdd;
+  const anySheetOpen = showLoc || !!selected || showOffer || showNotifs || !!showPayment || showAdd || !!selectedRental || showAddRental;
 
   const submitProd = async () => {
     if (!form.name||!form.price||!form.qty||!form.viloyat||!form.photos?.length) return;
@@ -186,6 +204,59 @@ export default function HomePage({
       }
     } catch { /* silent */ }
   };
+
+  // Rental handlers
+  const openRental = async (r) => {
+    setSelectedRental(r);
+    setBookingStart(null); setBookingEnd(null); setBookingNote("");
+    try {
+      const dates = await rentalsAPI.getBookedDates(r.id);
+      setBookedDates(dates);
+    } catch { setBookedDates([]); }
+  };
+
+  const submitRental = async () => {
+    if (!rentalForm.name || !rentalForm.pricePerDay || !rentalForm.viloyat || !rentalForm.photos?.length) return;
+    setRentalSubmitting(true);
+    try {
+      const newR = await rentalsAPI.create({
+        ...rentalForm,
+        photo: rentalForm.photos[0],
+        photos: rentalForm.photos,
+        pricePerDay: parseInt(rentalForm.pricePerDay),
+      });
+      setRentals(prev => [newR, ...prev]);
+      setShowAddRental(false);
+      setRentalForm(EMPTY_RENTAL_FORM || {});
+      setRentalStep(1);
+    } catch(e) { alert(e.message); }
+    finally { setRentalSubmitting(false); }
+  };
+
+  const submitBooking = async () => {
+    if (!bookingStart || !bookingEnd || !selectedRental) return;
+    setBookingLoading(true);
+    try {
+      await rentalsAPI.book(selectedRental.id, { startDate: bookingStart, endDate: bookingEnd, note: bookingNote });
+      // Refresh booked dates
+      const dates = await rentalsAPI.getBookedDates(selectedRental.id);
+      setBookedDates(dates);
+      setBookingStart(null); setBookingEnd(null); setBookingNote("");
+      alert("✅ Arenda muvaffaqiyatli band qilindi!");
+    } catch(e) { alert(e.message); }
+    finally { setBookingLoading(false); }
+  };
+
+  const rf = (key) => (val) => setRentalForm(prev => ({ ...prev, [key]: val }));
+
+  const filteredRentals = rentals.filter(r => {
+    const q = search.toLowerCase();
+    const catOk = activRentalCats.length === 0 || activRentalCats.includes(r.category);
+    return catOk
+      && (!search || r.name.toLowerCase().includes(q) || (r.viloyat||"").toLowerCase().includes(q))
+      && (!fVil || r.viloyat === fVil)
+      && (!fTum || r.tuman === fTum);
+  });
 
   const myNotifs    = offers;
   const unreadCount = myNotifs.filter(o => o.status==="pending").length + sentOffers.filter(o => o.status==="pending").length;
@@ -275,19 +346,55 @@ export default function HomePage({
         </div>
       </div>
 
-      {/* Category pills */}
-      <div style={{ padding:"10px 16px", display:"flex", flexWrap:"wrap", gap:7 }}>
-        {CATS.map(cat => {
-          if (cat === "Barchasi") return <Pill key={cat} active={activeCats.length===0} onClick={() => setActiveCats([])}>Barchasi</Pill>;
-          const isActive = activeCats.includes(cat);
-          return (
-            <Pill key={cat} active={isActive} onClick={() => setActiveCats(prev =>
-              prev.includes(cat) ? prev.filter(c=>c!==cat) : [...prev, cat])}>
-              {cat}
-            </Pill>
-          );
-        })}
+      {/* Main Tabs: Sotuvda / Arenda */}
+      <div style={{ display:"flex", margin:"8px 16px 0", borderRadius:14, overflow:"hidden",
+                    border:`1px solid ${C.border}`, background:C.card }}>
+        {[
+          { key:"sotuvda", label:"🛒 Sotuvda" },
+          { key:"arenda",  label:"🏠 Arenda" },
+        ].map(t => (
+          <button key={t.key} onClick={() => setMainTab(t.key)}
+            style={{ flex:1, padding:"10px 0", border:"none", fontFamily:"inherit",
+                     fontSize:13, fontWeight:800, cursor:"pointer",
+                     background: mainTab===t.key ? C.primaryDark : "transparent",
+                     color: mainTab===t.key ? "white" : C.textSub,
+                     transition:"all 0.15s" }}>
+            {t.label}
+          </button>
+        ))}
       </div>
+
+      {/* Category pills — Sotuvda */}
+      {mainTab === "sotuvda" && (
+        <div style={{ padding:"10px 16px", display:"flex", flexWrap:"wrap", gap:7 }}>
+          {CATS.map(cat => {
+            if (cat === "Barchasi") return <Pill key={cat} active={activeCats.length===0} onClick={() => setActiveCats([])}>Barchasi</Pill>;
+            const isActive = activeCats.includes(cat);
+            return (
+              <Pill key={cat} active={isActive} onClick={() => setActiveCats(prev =>
+                prev.includes(cat) ? prev.filter(c=>c!==cat) : [...prev, cat])}>
+                {cat}
+              </Pill>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Category pills — Arenda */}
+      {mainTab === "arenda" && (
+        <div style={{ padding:"10px 16px", display:"flex", flexWrap:"wrap", gap:7 }}>
+          {RENTAL_CATS.map(cat => {
+            if (cat === "Barchasi") return <Pill key={cat} active={activRentalCats.length===0} onClick={() => setActivRentalCats([])}>Barchasi</Pill>;
+            const isActive = activRentalCats.includes(cat);
+            return (
+              <Pill key={cat} active={isActive} onClick={() => setActivRentalCats(prev =>
+                prev.includes(cat) ? prev.filter(c=>c!==cat) : [...prev, cat])}>
+                {RENTAL_CAT_ICO[cat]} {cat}
+              </Pill>
+            );
+          })}
+        </div>
+      )}
 
       {isLocOn && (
         <div style={{ padding:"0 16px 8px" }}>
@@ -301,30 +408,59 @@ export default function HomePage({
         </div>
       )}
 
-      <div style={{ padding:"2px 16px 12px" }}>
-        <span style={{ fontSize:11, color:C.textMuted, fontWeight:600 }}>{filtered.length} ta mahsulot</span>
-      </div>
-
-      {/* Product grid */}
-      <div style={{ padding:"0 16px", display:"grid", gridTemplateColumns:"1fr 1fr", gap:14 }}>
-        {filtered.map(p => (
-          <PCard key={p.id} p={p}
-            isOwn={loggedIn && p.ownerId===user.id}
-            onClick={() => openSelected(p)}
-            onLike={handleLike}
-            loggedIn={loggedIn}
-          />
-        ))}
-      </div>
-
-      {filtered.length===0 && (
-        <div style={{ textAlign:"center", padding:"60px 20px", color:C.textMuted }}>
-          <div style={{ display:"flex", justifyContent:"center", marginBottom:10 }}>
-            <SearchX size={44} color={C.textMuted} style={{ opacity:0.5 }} />
+      {/* SOTUVDA tab */}
+      {mainTab === "sotuvda" && (
+        <>
+          <div style={{ padding:"2px 16px 12px" }}>
+            <span style={{ fontSize:11, color:C.textMuted, fontWeight:600 }}>{filtered.length} ta mahsulot</span>
           </div>
-          <div style={{ fontSize:14, fontWeight:700 }}>Hech narsa topilmadi</div>
-          <div style={{ fontSize:11, marginTop:4 }}>Filtr yoki qidiruvni o'zgartiring</div>
-        </div>
+          <div style={{ padding:"0 16px", display:"grid", gridTemplateColumns:"1fr 1fr", gap:14 }}>
+            {filtered.map(p => (
+              <PCard key={p.id} p={p}
+                isOwn={loggedIn && p.ownerId===user.id}
+                onClick={() => openSelected(p)}
+                onLike={handleLike}
+                loggedIn={loggedIn}
+              />
+            ))}
+          </div>
+          {filtered.length===0 && (
+            <div style={{ textAlign:"center", padding:"60px 20px", color:C.textMuted }}>
+              <SearchX size={44} color={C.textMuted} style={{ opacity:0.5, display:"block", margin:"0 auto 10px" }} />
+              <div style={{ fontSize:14, fontWeight:700 }}>Hech narsa topilmadi</div>
+              <div style={{ fontSize:11, marginTop:4 }}>Filtr yoki qidiruvni o'zgartiring</div>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* ARENDA tab */}
+      {mainTab === "arenda" && (
+        <>
+          <div style={{ padding:"2px 16px 10px", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+            <span style={{ fontSize:11, color:C.textMuted, fontWeight:600 }}>{filteredRentals.length} ta arenda</span>
+            {loggedIn && (
+              <button onClick={() => { setRentalForm(EMPTY_RENTAL_FORM||{}); setRentalStep(1); setShowAddRental(true); }}
+                style={{ fontSize:11, fontWeight:700, color:"#059669",
+                         background:"#D1FAE5", border:"1px solid #6EE7B7",
+                         borderRadius:10, padding:"5px 12px", cursor:"pointer", fontFamily:"inherit" }}>
+                + Arenda qo'sh
+              </button>
+            )}
+          </div>
+          <div style={{ padding:"0 16px", display:"grid", gridTemplateColumns:"1fr 1fr", gap:14 }}>
+            {filteredRentals.map(r => (
+              <RentalCard key={r.id} r={r} onClick={() => openRental(r)} />
+            ))}
+          </div>
+          {filteredRentals.length===0 && (
+            <div style={{ textAlign:"center", padding:"60px 20px", color:C.textMuted }}>
+              <div style={{ fontSize:36, marginBottom:10 }}>🏠</div>
+              <div style={{ fontSize:14, fontWeight:700 }}>Arenda yo'q</div>
+              <div style={{ fontSize:11, marginTop:4 }}>Hozircha arenda e'lonlari yo'q</div>
+            </div>
+          )}
+        </>
       )}
 
       {/* LOCATION SHEET */}
@@ -1037,6 +1173,207 @@ export default function HomePage({
             </>
           )}
         </div>
+      )}
+
+      {/* ─── RENTAL DETAIL SHEET ─────────────────────────────── */}
+      {selectedRental && (
+        <Sheet onClose={() => setSelectedRental(null)} maxH="92vh">
+          {/* Photo */}
+          <div style={{ position:"relative", width:"100%", height:180, borderRadius:16, overflow:"hidden",
+                        background:"#D1FAE5", marginBottom:14,
+                        display:"flex", alignItems:"center", justifyContent:"center" }}>
+            {selectedRental.photos?.length > 0
+              ? <img src={selectedRental.photos[0]} alt={selectedRental.name}
+                  style={{ width:"100%", height:"100%", objectFit:"cover" }} />
+              : <span style={{ fontSize:48 }}>🏠</span>
+            }
+            <div style={{ position:"absolute", top:8, left:8, background:"#059669",
+                          color:"white", fontSize:10, fontWeight:800,
+                          padding:"3px 10px", borderRadius:10 }}>🏠 Arenda</div>
+          </div>
+
+          <div style={{ fontSize:19, fontWeight:900, color:C.text, marginBottom:6 }}>{selectedRental.name}</div>
+
+          <div style={{ display:"flex", gap:10, marginBottom:12 }}>
+            <div style={{ flex:1, background:"#F0FDF4", borderRadius:12, padding:"10px",
+                          textAlign:"center", border:"1px solid #BBF7D0" }}>
+              <div style={{ fontSize:18, fontWeight:900, color:"#059669" }}>
+                {Number(selectedRental.pricePerDay).toLocaleString()}
+              </div>
+              <div style={{ fontSize:10, color:"#6B7280" }}>so'm / kun</div>
+            </div>
+            <div style={{ flex:1, background:C.bg, borderRadius:12, padding:"10px",
+                          textAlign:"center", border:`1px solid ${C.border}` }}>
+              <div style={{ display:"flex", justifyContent:"center" }}>
+                <LocIcon size={16} color={C.primaryDark} />
+              </div>
+              <div style={{ fontSize:11, fontWeight:700, color:C.text, marginTop:2 }}>
+                {selectedRental.viloyat}
+              </div>
+              {selectedRental.tuman && (
+                <div style={{ fontSize:10, color:C.textMuted }}>{selectedRental.tuman}</div>
+              )}
+            </div>
+          </div>
+
+          {selectedRental.description && (
+            <div style={{ fontSize:12, color:C.textSub, marginBottom:14, lineHeight:1.6,
+                          background:C.bg, borderRadius:12, padding:"10px 13px" }}>
+              {selectedRental.description}
+            </div>
+          )}
+
+          {selectedRental.ownerId === user?.id ? (
+            <div style={{ background:"#D1FAE5", border:"1px solid #6EE7B7",
+                          borderRadius:14, padding:"12px", textAlign:"center", marginBottom:12 }}>
+              <div style={{ fontSize:12, fontWeight:700, color:"#059669" }}>Bu sizning arenda e'loningiz</div>
+            </div>
+          ) : (
+            <>
+              {/* Calendar */}
+              <div style={{ fontSize:13, fontWeight:800, color:C.text, marginBottom:10 }}>
+                📅 Sana tanlang
+              </div>
+              <BookingCalendar
+                bookedRanges={bookedDates}
+                startDate={bookingStart}
+                endDate={bookingEnd}
+                onSelect={({ startDate, endDate }) => { setBookingStart(startDate); setBookingEnd(endDate); }}
+              />
+
+              {bookingStart && bookingEnd && (() => {
+                const days = Math.max(1, Math.ceil((new Date(bookingEnd) - new Date(bookingStart)) / 86400000) + 1);
+                const total = days * Number(selectedRental.pricePerDay);
+                const fee   = Math.max(1, Math.round(total * 0.05));
+                return (
+                  <div style={{ background:"#F0FDF4", borderRadius:14, padding:"12px 14px",
+                                marginTop:14, border:"1px solid #BBF7D0" }}>
+                    <div style={{ display:"flex", justifyContent:"space-between", marginBottom:4 }}>
+                      <span style={{ fontSize:12, color:C.textSub }}>Muddat</span>
+                      <span style={{ fontSize:12, fontWeight:700, color:C.text }}>{days} kun</span>
+                    </div>
+                    <div style={{ display:"flex", justifyContent:"space-between", marginBottom:4 }}>
+                      <span style={{ fontSize:12, color:C.textSub }}>Umumiy narx</span>
+                      <span style={{ fontSize:12, fontWeight:700, color:C.text }}>{total.toLocaleString()} so'm</span>
+                    </div>
+                    <div style={{ display:"flex", justifyContent:"space-between",
+                                  borderTop:"1px solid #BBF7D0", paddingTop:6, marginTop:6 }}>
+                      <span style={{ fontSize:12, fontWeight:700, color:"#059669" }}>Xizmat haqi (5%)</span>
+                      <span style={{ fontSize:14, fontWeight:900, color:"#059669" }}>{fee.toLocaleString()} so'm</span>
+                    </div>
+                    <div style={{ fontSize:10, color:C.textMuted, marginTop:6 }}>
+                      Balansdan: {Number(user?.balance||0).toLocaleString()} so'm
+                    </div>
+                  </div>
+                );
+              })()}
+
+              <div style={{ marginTop:12, marginBottom:8 }}>
+                <Lbl>Izoh (ixtiyoriy)</Lbl>
+                <TInput placeholder="Qo'shimcha izoh..." value={bookingNote} onChange={setBookingNote} />
+              </div>
+
+              <div style={{ display:"flex", gap:9 }}>
+                <BtnGhost onClick={() => setSelectedRental(null)}>Yopish</BtnGhost>
+                <BtnPrimary
+                  onClick={() => { if (!loggedIn) return requireAuth(); submitBooking(); }}
+                  disabled={!bookingStart || !bookingEnd || bookingLoading}>
+                  {bookingLoading
+                    ? <><Loader2 size={15} className="spin" /> Band qilinmoqda...</>
+                    : <><Calendar size={15} /> Zakaz berish</>
+                  }
+                </BtnPrimary>
+              </div>
+            </>
+          )}
+        </Sheet>
+      )}
+
+      {/* ─── ADD RENTAL SHEET ──────────────────────────────────── */}
+      {showAddRental && (
+        <Sheet onClose={() => { setShowAddRental(false); setRentalStep(1); }} maxH="92vh">
+          <div style={{ fontSize:15, fontWeight:800, color:C.text, marginBottom:14,
+                        display:"flex", alignItems:"center", gap:7 }}>
+            🏠 Arenda e'loni qo'shish
+            <span style={{ fontSize:11, color:C.textMuted, fontWeight:400 }}>({rentalStep}/3)</span>
+          </div>
+
+          {/* Step 1: Photo */}
+          {rentalStep === 1 && (
+            <>
+              <PhotoUpload photos={rentalForm.photos || []} onPhotos={rf("photos")} required />
+              {!(rentalForm.photos?.length) && (
+                <div style={{ fontSize:11, color:C.danger, marginBottom:12, fontWeight:600 }}>Rasm majburiy</div>
+              )}
+              <BtnPrimary onClick={() => rentalForm.photos?.length && setRentalStep(2)} disabled={!rentalForm.photos?.length} fullWidth>
+                Davom etish <ArrowRight size={15} />
+              </BtnPrimary>
+            </>
+          )}
+
+          {/* Step 2: Details */}
+          {rentalStep === 2 && (
+            <>
+              <Lbl>Nomi *</Lbl>
+              <TInput placeholder="Masalan: Rotavator, Iskala..." value={rentalForm.name||""} onChange={rf("name")} />
+
+              <Lbl>Kategoriya</Lbl>
+              <div style={{ display:"flex", flexWrap:"wrap", gap:6, marginBottom:14 }}>
+                {["asbob-uskuna","transport","qurilish texnikasi","iskala","boshqa"].map(c => (
+                  <Pill key={c} active={rentalForm.category===c} onClick={() => rf("category")(c)}>
+                    {RENTAL_CAT_ICO[c]} {c}
+                  </Pill>
+                ))}
+              </div>
+
+              <Lbl>Kunlik narx (so'm) *</Lbl>
+              <TInput type="number" min="0" placeholder="50000" value={rentalForm.pricePerDay||""} onChange={rf("pricePerDay")} />
+
+              <Lbl>Tavsif (ixtiyoriy)</Lbl>
+              <TInput placeholder="Qo'shimcha ma'lumot..." value={rentalForm.description||""} onChange={rf("description")} />
+
+              <div style={{ display:"flex", gap:9 }}>
+                <BtnGhost onClick={() => setRentalStep(1)}><ArrowLeft size={14} /> Orqaga</BtnGhost>
+                <BtnPrimary onClick={() => (rentalForm.name && rentalForm.pricePerDay) && setRentalStep(3)}
+                  disabled={!rentalForm.name || !rentalForm.pricePerDay}>
+                  Davom <ArrowRight size={14} />
+                </BtnPrimary>
+              </div>
+            </>
+          )}
+
+          {/* Step 3: Location + submit */}
+          {rentalStep === 3 && (
+            <>
+              <Lbl>Viloyat / Shahar *</Lbl>
+              <div style={{ display:"flex", flexWrap:"wrap", gap:6, marginBottom:14 }}>
+                {Object.keys(UZ).map(v => (
+                  <Pill key={v} active={rentalForm.viloyat===v}
+                    onClick={() => { rf("viloyat")(v); rf("tuman")(""); }}>{v}</Pill>
+                ))}
+              </div>
+              {rentalForm.viloyat && (
+                <>
+                  <Lbl>Tuman — {rentalForm.viloyat}</Lbl>
+                  <div style={{ display:"flex", flexWrap:"wrap", gap:6, marginBottom:14 }}>
+                    {UZ[rentalForm.viloyat].map(t => (
+                      <Pill key={t} active={rentalForm.tuman===t} accent onClick={() => rf("tuman")(t)}>{t}</Pill>
+                    ))}
+                  </div>
+                </>
+              )}
+              <div style={{ display:"flex", gap:9 }}>
+                <BtnGhost onClick={() => setRentalStep(2)}><ArrowLeft size={14} /> Orqaga</BtnGhost>
+                <BtnPrimary onClick={submitRental} disabled={!rentalForm.viloyat || rentalSubmitting}>
+                  {rentalSubmitting
+                    ? <><Loader2 size={15} className="spin" /> Yuborilmoqda...</>
+                    : <><Rocket size={15} /> E'lon joylash</>
+                  }
+                </BtnPrimary>
+              </div>
+            </>
+          )}
+        </Sheet>
       )}
 
       {/* Guest bottom nav */}
