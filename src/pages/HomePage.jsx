@@ -132,7 +132,15 @@ export default function HomePage({
       && (!fTum || p.tuman===fTum);
   });
 
-  const openSelected = (p) => { setSelected(p); setPhotoIdx(0); };
+  const openSelected = (p) => {
+    setSelected(p);
+    setPhotoIdx(0);
+    // Increment view count (fire and forget)
+    productsAPI.view(p.id).then(() => {
+      setProducts(prev => prev.map(x => x.id === p.id ? { ...x, viewCount: (x.viewCount||0)+1 } : x));
+      setSelected(prev => prev?.id === p.id ? { ...prev, viewCount: (prev.viewCount||0)+1 } : prev);
+    }).catch(() => {});
+  };
   const openLoc  = () => { setTVil(fVil); setTTum(fTum); setShowLoc(true); };
   const applyLoc = () => { setFVil(tVil); setFTum(tVil?tTum:""); setShowLoc(false); };
   const clearLoc = () => { setTVil(""); setTTum(""); setFVil(""); setFTum(""); setShowLoc(false); };
@@ -210,8 +218,15 @@ export default function HomePage({
     setSelectedRental(r);
     setBookingStart(null); setBookingEnd(null); setBookingNote("");
     try {
-      const dates = await rentalsAPI.getBookedDates(r.id);
+      const [dates, fresh] = await Promise.all([
+        rentalsAPI.getBookedDates(r.id),
+        rentalsAPI.getById(r.id).catch(() => null),
+      ]);
       setBookedDates(dates);
+      if (fresh) {
+        setSelectedRental(fresh);
+        setRentals(prev => prev.map(x => x.id === r.id ? { ...x, viewCount: fresh.viewCount } : x));
+      }
     } catch { setBookedDates([]); }
   };
 
