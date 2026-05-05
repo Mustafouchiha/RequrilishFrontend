@@ -5,10 +5,9 @@ import PaymentPage from "./PaymentPage";
 import { C, COND, OPERATOR } from "../constants";
 import { authAPI, rentalsAPI } from "../services/api";
 import {
-  Package, Calendar, Inbox, Trash2,
+  Package, Inbox, Trash2,
   Pencil, Check, LogOut, Lock, CreditCard,
   User, Send, MapPin, Wallet, Clock, AlertCircle, CheckCircle, XCircle, Eye,
-  Home, BookOpen, X,
 } from "lucide-react";
 
 function StatusBadge({ status, rejectReason }) {
@@ -96,7 +95,7 @@ export default function ProfilePage({ user, setUser, myProducts, offers = [],
                     marginBottom:18, gap:4, border:`1px solid ${C.border}` }}>
         {[
           ["profile", <User size={14}/>, "Profil"],
-          ["rentals", <Home size={14}/>, "Arenda"],
+          ["rentals", <span style={{fontSize:14}}>🏠</span>, "Arenda"],
           ["payment", <CreditCard size={14}/>, "To'lovlar"],
         ].map(([tab, icon, lbl]) => (
           <button key={tab} onClick={() => setActiveTab(tab)} style={{
@@ -117,7 +116,7 @@ export default function ProfilePage({ user, setUser, myProducts, offers = [],
           {/* My rental listings */}
           <div style={{ display:"flex", alignItems:"center", gap:7, fontSize:14,
                         fontWeight:800, color:C.text, marginBottom:12 }}>
-            <Home size={16} color="#059669" /> Mening arenda e'lonlarim
+            🏠 Mening arenda e'lonlarim
           </div>
 
           {myRentals.filter(r => r.status !== "deleted").length === 0 ? (
@@ -142,7 +141,7 @@ export default function ProfilePage({ user, setUser, myProducts, offers = [],
                                   display:"flex", alignItems:"center", justifyContent:"center" }}>
                       {r.photo
                         ? <img src={r.photo} alt={r.name} style={{ width:76, height:"100%", objectFit:"cover" }} />
-                        : <Home size={24} color="#6EE7B7" />
+                        : <span style={{fontSize:28}}>🏠</span>
                       }
                     </div>
                     <div style={{ flex:1, padding:"10px 12px", minWidth:0 }}>
@@ -171,7 +170,7 @@ export default function ProfilePage({ user, setUser, myProducts, offers = [],
           {/* My bookings as renter */}
           <div style={{ display:"flex", alignItems:"center", gap:7, fontSize:14,
                         fontWeight:800, color:C.text, marginBottom:12 }}>
-            <BookOpen size={16} color={C.primaryDark} /> Mening bronlarim
+            📋 Mening bronlarim
           </div>
 
           {myBookings.length === 0 ? (
@@ -217,7 +216,7 @@ export default function ProfilePage({ user, setUser, myProducts, offers = [],
                                  background:"#FEF2F2", color:"#EF4444",
                                  fontSize:11, fontWeight:700, cursor:"pointer",
                                  display:"flex", alignItems:"center", gap:4 }}>
-                        {cancellingId === b.id ? "..." : <><X size={11}/> Bekor</>}
+                        {cancellingId === b.id ? "..." : "✕ Bekor"}
                       </button>
                     )}
                   </div>
@@ -341,25 +340,24 @@ export default function ProfilePage({ user, setUser, myProducts, offers = [],
         </div>
 
         {/* Stats */}
-        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:18 }}>
+        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:8, marginBottom:18 }}>
           {[
-            [Package,  myProducts.length,                     "E'lonlarim"],
-            [Calendar, new Date(user.joined).getFullYear(),   "A'zo yili"],
-          ].map(([Icon, v, l]) => (
-            <div key={l} style={{ background:C.card, borderRadius:16, padding:"14px 10px",
+            ["📦", myProducts.filter(p => p.status !== "deleted").length, "E'lonlarim"],
+            ["🏠", myRentals.filter(r => r.status !== "deleted").length,  "Arendalarim"],
+            ["📅", myBookings.length,                                      "Bronlarim"],
+          ].map(([emoji, v, l]) => (
+            <div key={l} style={{ background:C.card, borderRadius:16, padding:"12px 8px",
                                   textAlign:"center", border:`1px solid ${C.border}`, boxShadow:C.shadow }}>
-              <div style={{ display:"flex", justifyContent:"center", marginBottom:4 }}>
-                <Icon size={22} color={C.primaryDark} />
-              </div>
-              <div style={{ fontSize:22, fontWeight:900, color:C.primaryDark }}>{v}</div>
-              <div style={{ fontSize:10, color:C.textMuted }}>{l}</div>
+              <div style={{ fontSize:20, marginBottom:3 }}>{emoji}</div>
+              <div style={{ fontSize:20, fontWeight:900, color:C.primaryDark }}>{v}</div>
+              <div style={{ fontSize:9, color:C.textMuted }}>{l}</div>
             </div>
           ))}
         </div>
 
         {/* My listings — show all statuses */}
         <div style={{ display:"flex", alignItems:"center", gap:7, fontSize:14, fontWeight:800, color:C.text, marginBottom:12 }}>
-          <Package size={16} color={C.primaryDark} /> Mening e'lonlarim
+          📦 Mening e'lonlarim
         </div>
 
         {/* Hide self-deleted products; still show operator-rejected ones */}

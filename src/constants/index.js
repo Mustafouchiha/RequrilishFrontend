@@ -58,9 +58,9 @@ export const DEMO_PHOTOS = [
 export const CATS    = ["Barchasi","g'isht","metall","yog'och","beton","boshqa"];
 export const CAT_ICO = { "Barchasi":"🏗","g'isht":"🧱","metall":"🔩","yog'och":"🪵","beton":"⬜","boshqa":"🔧" };
 
-export const RENTAL_CATS    = ["Barchasi","asbob-uskuna","transport","qurilish texnikasi","iskala","boshqa"];
-export const RENTAL_CAT_ICO = { "Barchasi":"🏠","asbob-uskuna":"🔨","transport":"🚛","qurilish texnikasi":"🏗","iskala":"🪜","boshqa":"📦" };
-export const EMPTY_RENTAL_FORM = { name:"", category:"asbob-uskuna", pricePerDay:"", viloyat:"", tuman:"", description:"", photos:[] };
+export const RENTAL_CATS    = ["Barchasi","asbob-uskuna","qurilish texnikasi","iskala","boshqa"];
+export const RENTAL_CAT_ICO = { "Barchasi":"🏠","asbob-uskuna":"🔨","qurilish texnikasi":"🏗","iskala":"🪜","boshqa":"📦" };
+export const EMPTY_RENTAL_FORM = { name:"", category:"asbob-uskuna", pricePerDay:"", pricePerHour:"", viloyat:"", tuman:"", description:"", photos:[] };
 
 export const INIT_PRODUCTS = [
   { id:1, name:"Eski g'isht",      category:"g'isht",  price:450,    unit:"dona", qty:2000, viloyat:"Toshkent sh.", tuman:"Yunusobod",      photo:DEMO_PHOTOS[0], condition:"A'lo",   ownerId:1 },

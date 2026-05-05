@@ -763,9 +763,21 @@ export default function HomePage({
                   <User size={11} /> Xaridor: <b>{o.buyerName || o.buyerId?.slice(0,8) || "—"}</b>
                 </div>
                 {o.status==="paid" ? (
-                  <div style={{ padding:"10px", borderRadius:12, background:"#E8F8F0",
-                                color:"#28A869", fontSize:12, fontWeight:900, textAlign:"center" }}>
-                    ✅ To'lov qilingan — mahsulot sotildi
+                  <div style={{ display:"flex", gap:8, alignItems:"center" }}>
+                    <div style={{ flex:1, padding:"10px", borderRadius:12, background:"#E8F8F0",
+                                  color:"#28A869", fontSize:12, fontWeight:900, textAlign:"center" }}>
+                      ✅ To'lov qilingan — mahsulot sotildi
+                    </div>
+                    <button onClick={async () => {
+                        try { await offersAPI.cancel(o.id); setOffers(prev => prev.filter(x => x.id !== o.id)); }
+                        catch { setOffers(prev => prev.filter(x => x.id !== o.id)); }
+                      }}
+                      title="Ro'yxatdan o'chirish"
+                      style={{ width:36, height:36, borderRadius:10, border:"none", flexShrink:0,
+                               background:"#F3F4F6", color:C.textMuted, cursor:"pointer",
+                               display:"flex", alignItems:"center", justifyContent:"center" }}>
+                      <Trash2 size={14} />
+                    </button>
                   </div>
                 ) : (
                   <div style={{ display:"flex", gap:8 }}>
@@ -821,9 +833,21 @@ export default function HomePage({
                   Narx: <b>{Number(o.productPrice||0).toLocaleString()} so'm</b>
                 </div>
                 {o.status==="paid" ? (
-                  <div style={{ padding:"10px", borderRadius:12, background:"#E8F8F0",
-                                color:"#28A869", fontSize:12, fontWeight:900, textAlign:"center" }}>
-                    ✅ Bitim yakunlandi
+                  <div style={{ display:"flex", gap:8, alignItems:"center" }}>
+                    <div style={{ flex:1, padding:"10px", borderRadius:12, background:"#E8F8F0",
+                                  color:"#28A869", fontSize:12, fontWeight:900, textAlign:"center" }}>
+                      ✅ Bitim yakunlandi
+                    </div>
+                    <button onClick={async () => {
+                        try { await offersAPI.cancel(o.id); } catch {}
+                        if (setSentOffers) setSentOffers(prev => prev.filter(x => x.id !== o.id));
+                      }}
+                      title="Ro'yxatdan o'chirish"
+                      style={{ width:36, height:36, borderRadius:10, border:"none", flexShrink:0,
+                               background:"#F3F4F6", color:C.textMuted, cursor:"pointer",
+                               display:"flex", alignItems:"center", justifyContent:"center" }}>
+                      <Trash2 size={14} />
+                    </button>
                   </div>
                 ) : (
                   <button onClick={async () => {
@@ -1194,7 +1218,7 @@ export default function HomePage({
 
           <div style={{ fontSize:19, fontWeight:900, color:C.text, marginBottom:6 }}>{selectedRental.name}</div>
 
-          <div style={{ display:"flex", gap:10, marginBottom:12 }}>
+          <div style={{ display:"flex", gap:8, marginBottom:12 }}>
             <div style={{ flex:1, background:"#F0FDF4", borderRadius:12, padding:"10px",
                           textAlign:"center", border:"1px solid #BBF7D0" }}>
               <div style={{ fontSize:18, fontWeight:900, color:"#059669" }}>
@@ -1202,6 +1226,15 @@ export default function HomePage({
               </div>
               <div style={{ fontSize:10, color:"#6B7280" }}>so'm / kun</div>
             </div>
+            {selectedRental.pricePerHour > 0 && (
+              <div style={{ flex:1, background:"#ECFDF5", borderRadius:12, padding:"10px",
+                            textAlign:"center", border:"1px solid #A7F3D0" }}>
+                <div style={{ fontSize:18, fontWeight:900, color:"#059669" }}>
+                  {Number(selectedRental.pricePerHour).toLocaleString()}
+                </div>
+                <div style={{ fontSize:10, color:"#6B7280" }}>so'm / soat</div>
+              </div>
+            )}
             <div style={{ flex:1, background:C.bg, borderRadius:12, padding:"10px",
                           textAlign:"center", border:`1px solid ${C.border}` }}>
               <div style={{ display:"flex", justifyContent:"center" }}>
@@ -1280,7 +1313,7 @@ export default function HomePage({
                   disabled={!bookingStart || !bookingEnd || bookingLoading}>
                   {bookingLoading
                     ? <><Loader2 size={15} className="spin" /> Band qilinmoqda...</>
-                    : <><Calendar size={15} /> Zakaz berish</>
+                    : "📅 Zakaz berish"
                   }
                 </BtnPrimary>
               </div>
@@ -1319,15 +1352,26 @@ export default function HomePage({
 
               <Lbl>Kategoriya</Lbl>
               <div style={{ display:"flex", flexWrap:"wrap", gap:6, marginBottom:14 }}>
-                {["asbob-uskuna","transport","qurilish texnikasi","iskala","boshqa"].map(c => (
+                {["asbob-uskuna","qurilish texnikasi","iskala","boshqa"].map(c => (
                   <Pill key={c} active={rentalForm.category===c} onClick={() => rf("category")(c)}>
                     {RENTAL_CAT_ICO[c]} {c}
                   </Pill>
                 ))}
               </div>
 
-              <Lbl>Kunlik narx (so'm) *</Lbl>
-              <TInput type="number" min="0" placeholder="50000" value={rentalForm.pricePerDay||""} onChange={rf("pricePerDay")} />
+              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:4 }}>
+                <div>
+                  <Lbl>Kunlik narx (so'm) *</Lbl>
+                  <TInput type="number" min="0" placeholder="50 000" value={rentalForm.pricePerDay||""} onChange={rf("pricePerDay")} />
+                </div>
+                <div>
+                  <Lbl>Soatlik narx (so'm)</Lbl>
+                  <TInput type="number" min="0" placeholder="5 000" value={rentalForm.pricePerHour||""} onChange={rf("pricePerHour")} />
+                </div>
+              </div>
+              <div style={{ fontSize:10, color:C.textMuted, marginBottom:14 }}>
+                * Kunlik narx majburiy. Soatlik ixtiyoriy.
+              </div>
 
               <Lbl>Tavsif (ixtiyoriy)</Lbl>
               <TInput placeholder="Qo'shimcha ma'lumot..." value={rentalForm.description||""} onChange={rf("description")} />

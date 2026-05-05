@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
 import { C } from "../constants";
 
 const MONTHS_UZ = ["Yanvar","Fevral","Mart","Aprel","May","Iyun","Iyul","Avgust","Sentyabr","Oktyabr","Noyabr","Dekabr"];
@@ -63,7 +62,6 @@ export default function BookingCalendar({ bookedRanges = [], startDate, endDate,
         return;
       }
       const [s, e] = dateStr >= startDate ? [startDate, dateStr] : [dateStr, startDate];
-      // Check no booked dates in range
       const hasConflict = bookedRanges.some(r => !(r.endDate < s || r.startDate > e));
       if (hasConflict) {
         onSelect({ startDate: dateStr, endDate: null });
@@ -79,16 +77,18 @@ export default function BookingCalendar({ bookedRanges = [], startDate, endDate,
       <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:10 }}>
         <button onClick={prevMonth}
           style={{ background:"none", border:`1px solid ${C.border}`, borderRadius:8, width:32, height:32,
-                   cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>
-          <ChevronLeft size={16} color={C.textSub} />
+                   cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center",
+                   fontSize:16, color:C.textSub, fontFamily:"inherit" }}>
+          ‹
         </button>
         <span style={{ fontSize:14, fontWeight:800, color:C.text }}>
           {MONTHS_UZ[viewMonth]} {viewYear}
         </span>
         <button onClick={nextMonth}
           style={{ background:"none", border:`1px solid ${C.border}`, borderRadius:8, width:32, height:32,
-                   cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>
-          <ChevronRight size={16} color={C.textSub} />
+                   cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center",
+                   fontSize:16, color:C.textSub, fontFamily:"inherit" }}>
+          ›
         </button>
       </div>
 

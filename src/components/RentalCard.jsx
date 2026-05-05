@@ -1,6 +1,5 @@
 import LocIcon from "./LocIcon";
 import { C } from "../constants";
-import { Image, Calendar, Eye } from "lucide-react";
 
 export default function RentalCard({ r, onClick }) {
   return (
@@ -18,18 +17,19 @@ export default function RentalCard({ r, onClick }) {
                     color:"white", fontSize:9, fontWeight:800,
                     padding:"3px 8px", borderRadius:10,
                     display:"flex", alignItems:"center", gap:3 }}>
-        <Calendar size={9} /> Arenda
+        📅 Arenda
       </div>
 
       {/* photo */}
       <div style={{ width:"100%", height:120, background:"#D1FAE5", overflow:"hidden",
-                    display:"flex", alignItems:"center", justifyContent:"center" }}>
+                    display:"flex", alignItems:"center", justifyContent:"center",
+                    fontSize:42 }}>
         {r.photo
           ? <img src={r.photo} alt={r.name}
               style={{ width:"100%", height:"100%", objectFit:"cover" }}
               onError={e => { e.target.style.display="none"; }}
             />
-          : <Image size={48} color="#6EE7B7" />
+          : "🏠"
         }
       </div>
 
@@ -45,7 +45,7 @@ export default function RentalCard({ r, onClick }) {
       </div>
 
       {/* Narx */}
-      <div style={{ margin:"6px 12px 8px", padding:"8px 10px",
+      <div style={{ margin:"6px 12px 10px", padding:"8px 10px",
                     background:"#F0FDF4", borderRadius:12,
                     display:"flex", justifyContent:"space-between", alignItems:"center",
                     border:"1px solid #BBF7D0" }}>
@@ -55,9 +55,11 @@ export default function RentalCard({ r, onClick }) {
           </div>
           <div style={{ fontSize:9, color:"#6B7280", lineHeight:1.4 }}>so'm / kun</div>
         </div>
-        <span style={{ fontSize:9, color:"#6B7280", display:"flex", alignItems:"center", gap:3 }}>
-          <Eye size={9} /> {r.viewCount || 0}
-        </span>
+        {(r.viewCount > 0) && (
+          <span style={{ fontSize:9, color:"#6B7280" }}>
+            👁 {r.viewCount}
+          </span>
+        )}
       </div>
     </div>
   );

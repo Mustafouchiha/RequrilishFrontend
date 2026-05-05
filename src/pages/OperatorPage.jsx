@@ -8,7 +8,6 @@ import {
   AlertTriangle, RefreshCw, PlusCircle, MinusCircle,
   Shield, UserPlus, UserMinus, Wallet, Clock,
   Pencil, ToggleLeft, ToggleRight, Heart,
-  Home, Calendar, BookOpen,
 } from "lucide-react";
 
 const phoneCore = (v) => String(v || "").replace(/\D/g, "").slice(-9);
@@ -276,7 +275,7 @@ const TABS = [
   { key:"approval",  Icon:CheckSquare, label:"Tasdiqlash" },
   { key:"users",     Icon:Users,       label:"Foydalanuvchi" },
   { key:"products",  Icon:Package,     label:"Mahsulot" },
-  { key:"rentals",   Icon:Home,        label:"Arenda" },
+  { key:"rentals",   Icon:null,        label:"Arenda", emoji:"🏠" },
   { key:"payments",  Icon:CreditCard,  label:"To'lov" },
   { key:"operators", Icon:Shield,      label:"Operator" },
 ];
@@ -511,7 +510,7 @@ export default function OperatorPage({ onBack, user }) {
       {/* Tab bar */}
       <div style={{ display:"flex", background:"white", borderBottom:`1px solid ${C.border}`,
                     position:"sticky", top:0, zIndex:10 }}>
-        {visibleTabs.map(({ key, Icon, label }) => (
+        {visibleTabs.map(({ key, Icon, label, emoji }) => (
           <button key={key} onClick={() => setTab(key)}
             style={{ flex:1, padding:"10px 2px", border:"none", background:"transparent",
                      cursor:"pointer", fontFamily:"inherit", fontSize:9, fontWeight:700,
@@ -519,7 +518,10 @@ export default function OperatorPage({ onBack, user }) {
                      borderBottom: `2.5px solid ${tab===key ? C.primaryDark : "transparent"}`,
                      display:"flex", flexDirection:"column", alignItems:"center", gap:3,
                      position:"relative", transition:"color .15s" }}>
-            <Icon size={17} />
+            {emoji
+              ? <span style={{ fontSize:17, lineHeight:1 }}>{emoji}</span>
+              : <Icon size={17} />
+            }
             {label}
             {key==="approval" && pending.length > 0 && (
               <div style={{ position:"absolute", top:6, right:"calc(50% - 14px)",
@@ -768,7 +770,7 @@ export default function OperatorPage({ onBack, user }) {
                   </select>
                 </div>
                 {rentals.length === 0 ? (
-                  <EmptyState Icon={Home} text="Arenda e'lonlar yo'q" />
+                  <EmptyState emoji="🏠" text="Arenda e'lonlar yo'q" />
                 ) : rentals.map(r => (
                   <div key={r.id} style={{ background:"white", borderRadius:12, marginBottom:8,
                                            border:`1px solid ${r.status==="pending_approval"?"#FDE68A":"#D1FAE5"}`,
@@ -788,8 +790,8 @@ export default function OperatorPage({ onBack, user }) {
                           {r.owner_name||"—"} · {fmtPhone(r.owner_phone)}
                         </div>
                         <div style={{ display:"flex", gap:10, marginTop:3 }}>
-                          <span style={{ fontSize:10, color:C.textMuted, display:"flex", alignItems:"center", gap:2 }}>
-                            <Eye size={10} /> {r.view_count || 0}
+                          <span style={{ fontSize:10, color:C.textMuted }}>
+                            👁 {r.view_count || 0}
                           </span>
                           <span style={{ fontSize:10, color:C.textMuted }}>
                             🗂 {r.category}
@@ -802,14 +804,14 @@ export default function OperatorPage({ onBack, user }) {
                             <button onClick={() => approveRental(r.id)}
                               style={{ padding:"5px 8px", borderRadius:7, border:"none",
                                        background:"#D1FAE5", color:"#059669", cursor:"pointer",
-                                       fontSize:10, fontWeight:700, display:"flex", alignItems:"center", gap:3 }}>
-                              <CheckCircle size={12}/> Tasdiqlash
+                                       fontSize:10, fontWeight:700 }}>
+                              ✓ Tasdiqlash
                             </button>
                             <button onClick={() => setConfirmDlg({ type:"reject-rental", d:r })}
                               style={{ padding:"5px 8px", borderRadius:7, border:"none",
                                        background:"#FEF2F2", color:C.danger, cursor:"pointer",
-                                       fontSize:10, fontWeight:700, display:"flex", alignItems:"center", gap:3 }}>
-                              <XCircle size={12}/> Rad et
+                                       fontSize:10, fontWeight:700 }}>
+                              ✕ Rad et
                             </button>
                           </>
                         )}
@@ -817,15 +819,14 @@ export default function OperatorPage({ onBack, user }) {
                           style={{ padding:"5px 8px", borderRadius:7, border:"none",
                                    background: r.status==="hidden" ? "#D1FAE5" : "#F3F4F6",
                                    color: r.status==="hidden" ? "#059669" : C.textSub,
-                                   cursor:"pointer", fontSize:10, fontWeight:700,
-                                   display:"flex", alignItems:"center", gap:3 }}>
-                          {r.status==="hidden" ? <><Eye size={12}/> Ko'rsat</> : <><EyeOff size={12}/> Yashir</>}
+                                   cursor:"pointer", fontSize:10, fontWeight:700 }}>
+                          {r.status==="hidden" ? "👁 Ko'rsat" : "🙈 Yashir"}
                         </button>
                         <button onClick={() => setConfirmDlg({ type:"del-rental", d:r })}
                           style={{ padding:"5px 8px", borderRadius:7, border:"none",
                                    background:"#FEF2F2", color:C.danger, cursor:"pointer",
-                                   fontSize:10, fontWeight:700, display:"flex", alignItems:"center", gap:3 }}>
-                          <Trash2 size={12}/> O'chir
+                                   fontSize:10, fontWeight:700 }}>
+                          🗑 O'chir
                         </button>
                       </div>
                     </div>
@@ -838,7 +839,7 @@ export default function OperatorPage({ onBack, user }) {
             {rentalSubTab === "bookings" && (
               <div>
                 {rentalBookings.length === 0 ? (
-                  <EmptyState Icon={Calendar} text="Hali bronlar yo'q" />
+                  <EmptyState emoji="📅" text="Hali bronlar yo'q" />
                 ) : rentalBookings.map(b => (
                   <div key={b.id} style={{ background:"white", borderRadius:12, marginBottom:8,
                                            border:"1px solid #D1FAE5", padding:"11px 13px" }}>
@@ -869,8 +870,8 @@ export default function OperatorPage({ onBack, user }) {
                       <button onClick={() => setConfirmDlg({ type:"cancel-booking", d:b })}
                         style={{ padding:"6px 12px", borderRadius:8, border:"none",
                                  background:"#FEF2F2", color:C.danger, fontSize:11, fontWeight:700,
-                                 cursor:"pointer", display:"flex", alignItems:"center", gap:4 }}>
-                        <XCircle size={12}/> Bekor qilish
+                                 cursor:"pointer" }}>
+                        ✕ Bekor qilish
                       </button>
                     )}
                   </div>
@@ -975,10 +976,13 @@ export default function OperatorPage({ onBack, user }) {
   );
 }
 
-function EmptyState({ Icon, text }) {
+function EmptyState({ Icon, emoji, text }) {
   return (
     <div style={{ textAlign:"center", padding:"48px 20px", color:C.textMuted }}>
-      <Icon size={36} color={C.border} style={{ marginBottom:10 }} />
+      {emoji
+        ? <div style={{ fontSize:36, marginBottom:10 }}>{emoji}</div>
+        : <Icon size={36} color={C.border} style={{ marginBottom:10 }} />
+      }
       <div style={{ fontSize:13, fontWeight:700 }}>{text}</div>
     </div>
   );
