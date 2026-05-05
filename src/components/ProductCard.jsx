@@ -1,6 +1,6 @@
 import LocIcon from "./LocIcon";
 import { C, COND } from "../constants";
-import { Image, Pencil, Eye, Heart } from "lucide-react";
+import { Image, Pencil, Heart } from "lucide-react";
 
 // ─── PRODUCT CARD ─────────────────────────────────────────────────
 export default function PCard({ p, onClick, isOwn, onLike, loggedIn }) {
@@ -81,7 +81,7 @@ export default function PCard({ p, onClick, isOwn, onLike, loggedIn }) {
       </div>
 
       {/* Narx + miqdor */}
-      <div style={{ margin:"8px 12px 8px", padding:"8px 10px",
+      <div style={{ margin:"8px 12px 10px", padding:"8px 10px",
                     background:C.bg, borderRadius:12,
                     display:"flex", justifyContent:"space-between", alignItems:"center",
                     flexWrap:"wrap", gap:6,
@@ -94,26 +94,24 @@ export default function PCard({ p, onClick, isOwn, onLike, loggedIn }) {
             so'm / {p.unit}
           </div>
         </div>
-        <div style={{ textAlign:"center", background:C.card,
-                      padding:"3px 10px", borderRadius:8,
-                      border:`1px solid ${C.border}`, flex:"0 0 auto" }}>
-          <div style={{ fontSize:11, fontWeight:700, color:C.textSub, lineHeight:1.2 }}>{p.qty}</div>
-          <div style={{ fontSize:8, color:C.textMuted, lineHeight:1.4 }}>{p.unit}</div>
+        <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+          {/* Like count */}
+          {(p.likeCount > 0 || p.isLiked) && (
+            <span style={{ fontSize:9, display:"flex", alignItems:"center", gap:2,
+                           color: p.isLiked ? "#EF4444" : C.textMuted }}>
+              <Heart size={9}
+                color={p.isLiked ? "#EF4444" : C.textMuted}
+                fill={p.isLiked ? "#EF4444" : "none"} />
+              {p.likeCount || 0}
+            </span>
+          )}
+          <div style={{ textAlign:"center", background:C.card,
+                        padding:"3px 10px", borderRadius:8,
+                        border:`1px solid ${C.border}` }}>
+            <div style={{ fontSize:11, fontWeight:700, color:C.textSub, lineHeight:1.2 }}>{p.qty}</div>
+            <div style={{ fontSize:8, color:C.textMuted, lineHeight:1.4 }}>{p.unit}</div>
+          </div>
         </div>
-      </div>
-
-      {/* Views + Likes stats */}
-      <div style={{ padding:"0 12px 10px", display:"flex", gap:10, alignItems:"center" }}>
-        <span style={{ fontSize:9, color:C.textMuted, display:"flex", alignItems:"center", gap:3 }}>
-          <Eye size={9} color={C.textMuted} /> {p.viewCount || 0}
-        </span>
-        <span style={{ fontSize:9, display:"flex", alignItems:"center", gap:3,
-                       color: p.isLiked ? "#EF4444" : C.textMuted }}>
-          <Heart size={9}
-            color={p.isLiked ? "#EF4444" : C.textMuted}
-            fill={p.isLiked ? "#EF4444" : "none"} />
-          {p.likeCount || 0}
-        </span>
       </div>
     </div>
   );
