@@ -1,5 +1,6 @@
 import LocIcon from "./LocIcon";
 import { C } from "../constants";
+import { Calendar, Home, Eye } from "lucide-react";
 
 export default function RentalCard({ r, onClick }) {
   return (
@@ -17,7 +18,7 @@ export default function RentalCard({ r, onClick }) {
                     color:"white", fontSize:9, fontWeight:800,
                     padding:"3px 8px", borderRadius:10,
                     display:"flex", alignItems:"center", gap:3 }}>
-        📅 Arenda
+        <Calendar size={9} /> Arenda
       </div>
 
       {/* photo */}
@@ -29,7 +30,7 @@ export default function RentalCard({ r, onClick }) {
               style={{ width:"100%", height:"100%", objectFit:"cover" }}
               onError={e => { e.target.style.display="none"; }}
             />
-          : "🏠"
+          : <Home size={48} color="#6EE7B7" />
         }
       </div>
 
@@ -56,8 +57,8 @@ export default function RentalCard({ r, onClick }) {
           <div style={{ fontSize:9, color:"#6B7280", lineHeight:1.4 }}>so'm / kun</div>
         </div>
         {(r.viewCount > 0) && (
-          <span style={{ fontSize:9, color:"#6B7280" }}>
-            👁 {r.viewCount}
+          <span style={{ fontSize:9, color:"#6B7280", display:"flex", alignItems:"center", gap:3 }}>
+            <Eye size={9} /> {r.viewCount}
           </span>
         )}
       </div>

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { C } from "../constants";
-import { operatorAPI } from "../services/api";
+import { operatorAPI, settingsAPI } from "../services/api";
 import {
   Search, Trash2, Users, Package, ChevronLeft,
   Loader2, CheckCircle, XCircle, EyeOff, Eye,
@@ -8,6 +8,7 @@ import {
   AlertTriangle, RefreshCw, PlusCircle, MinusCircle,
   Shield, UserPlus, UserMinus, Wallet, Clock,
   Pencil, ToggleLeft, ToggleRight, Heart,
+  Home, Check, X, FolderOpen, Calendar,
 } from "lucide-react";
 
 const phoneCore = (v) => String(v || "").replace(/\D/g, "").slice(-9);
@@ -275,12 +276,12 @@ const TABS = [
   { key:"approval",  Icon:CheckSquare, label:"Tasdiqlash" },
   { key:"users",     Icon:Users,       label:"Foydalanuvchi" },
   { key:"products",  Icon:Package,     label:"Mahsulot" },
-  { key:"rentals",   Icon:null,        label:"Arenda", emoji:"🏠" },
+  { key:"rentals",   Icon:Home,        label:"Arenda" },
   { key:"payments",  Icon:CreditCard,  label:"To'lov" },
   { key:"operators", Icon:Shield,      label:"Operator" },
 ];
 
-export default function OperatorPage({ onBack, user }) {
+export default function OperatorPage({ onBack, user, arendaEnabled = false, setArendaEnabled }) {
   const isMainOp = phoneCore(user?.phone) === "331350206";
   const visibleTabs = isMainOp ? TABS : TABS.filter(t => t.key !== "operators");
 
@@ -744,13 +745,17 @@ export default function OperatorPage({ onBack, user }) {
             {/* Sub-tabs */}
             <div style={{ display:"flex", background:"white", borderRadius:12, padding:3,
                           marginBottom:12, gap:3, border:`1px solid ${C.border}` }}>
-              {[["listings","🏠 E'lonlar"], ["bookings","📅 Bronlar"]].map(([key, lbl]) => (
+              {[
+                ["listings", <Home size={12}/>, "E'lonlar"],
+                ["bookings", <Calendar size={12}/>, "Bronlar"],
+              ].map(([key, icon, lbl]) => (
                 <button key={key} onClick={() => setRentalSubTab(key)} style={{
                   flex:1, padding:"7px 0", borderRadius:9, border:"none", cursor:"pointer",
                   fontFamily:"inherit", fontSize:11, fontWeight:700,
                   background: rentalSubTab===key ? "#059669" : "transparent",
                   color: rentalSubTab===key ? "white" : C.textMuted,
-                }}>{lbl}</button>
+                  display:"flex", alignItems:"center", justifyContent:"center", gap:4,
+                }}>{icon} {lbl}</button>
               ))}
             </div>
 
@@ -770,7 +775,7 @@ export default function OperatorPage({ onBack, user }) {
                   </select>
                 </div>
                 {rentals.length === 0 ? (
-                  <EmptyState emoji="🏠" text="Arenda e'lonlar yo'q" />
+                  <EmptyState Icon={Home} text="Arenda e'lonlar yo'q" />
                 ) : rentals.map(r => (
                   <div key={r.id} style={{ background:"white", borderRadius:12, marginBottom:8,
                                            border:`1px solid ${r.status==="pending_approval"?"#FDE68A":"#D1FAE5"}`,
@@ -790,11 +795,11 @@ export default function OperatorPage({ onBack, user }) {
                           {r.owner_name||"—"} · {fmtPhone(r.owner_phone)}
                         </div>
                         <div style={{ display:"flex", gap:10, marginTop:3 }}>
-                          <span style={{ fontSize:10, color:C.textMuted }}>
-                            👁 {r.view_count || 0}
+                          <span style={{ fontSize:10, color:C.textMuted, display:"flex", alignItems:"center", gap:3 }}>
+                            <Eye size={10} /> {r.view_count || 0}
                           </span>
-                          <span style={{ fontSize:10, color:C.textMuted }}>
-                            🗂 {r.category}
+                          <span style={{ fontSize:10, color:C.textMuted, display:"flex", alignItems:"center", gap:3 }}>
+                            <FolderOpen size={10} /> {r.category}
                           </span>
                         </div>
                       </div>
@@ -804,14 +809,16 @@ export default function OperatorPage({ onBack, user }) {
                             <button onClick={() => approveRental(r.id)}
                               style={{ padding:"5px 8px", borderRadius:7, border:"none",
                                        background:"#D1FAE5", color:"#059669", cursor:"pointer",
-                                       fontSize:10, fontWeight:700 }}>
-                              ✓ Tasdiqlash
+                                       fontSize:10, fontWeight:700,
+                                       display:"flex", alignItems:"center", gap:3 }}>
+                              <Check size={12}/> Tasdiqlash
                             </button>
                             <button onClick={() => setConfirmDlg({ type:"reject-rental", d:r })}
                               style={{ padding:"5px 8px", borderRadius:7, border:"none",
                                        background:"#FEF2F2", color:C.danger, cursor:"pointer",
-                                       fontSize:10, fontWeight:700 }}>
-                              ✕ Rad et
+                                       fontSize:10, fontWeight:700,
+                                       display:"flex", alignItems:"center", gap:3 }}>
+                              <X size={12}/> Rad et
                             </button>
                           </>
                         )}
@@ -819,14 +826,16 @@ export default function OperatorPage({ onBack, user }) {
                           style={{ padding:"5px 8px", borderRadius:7, border:"none",
                                    background: r.status==="hidden" ? "#D1FAE5" : "#F3F4F6",
                                    color: r.status==="hidden" ? "#059669" : C.textSub,
-                                   cursor:"pointer", fontSize:10, fontWeight:700 }}>
-                          {r.status==="hidden" ? "👁 Ko'rsat" : "🙈 Yashir"}
+                                   cursor:"pointer", fontSize:10, fontWeight:700,
+                                   display:"flex", alignItems:"center", gap:3 }}>
+                          {r.status==="hidden" ? <><Eye size={12}/> Ko'rsat</> : <><EyeOff size={12}/> Yashir</>}
                         </button>
                         <button onClick={() => setConfirmDlg({ type:"del-rental", d:r })}
                           style={{ padding:"5px 8px", borderRadius:7, border:"none",
                                    background:"#FEF2F2", color:C.danger, cursor:"pointer",
-                                   fontSize:10, fontWeight:700 }}>
-                          🗑 O'chir
+                                   fontSize:10, fontWeight:700,
+                                   display:"flex", alignItems:"center", gap:3 }}>
+                          <Trash2 size={12}/> O'chir
                         </button>
                       </div>
                     </div>
@@ -839,7 +848,7 @@ export default function OperatorPage({ onBack, user }) {
             {rentalSubTab === "bookings" && (
               <div>
                 {rentalBookings.length === 0 ? (
-                  <EmptyState emoji="📅" text="Hali bronlar yo'q" />
+                  <EmptyState Icon={Calendar} text="Hali bronlar yo'q" />
                 ) : rentalBookings.map(b => (
                   <div key={b.id} style={{ background:"white", borderRadius:12, marginBottom:8,
                                            border:"1px solid #D1FAE5", padding:"11px 13px" }}>
@@ -852,7 +861,7 @@ export default function OperatorPage({ onBack, user }) {
                       </span>
                     </div>
                     <div style={{ fontSize:11, color:C.textSub, marginBottom:3 }}>
-                      📅 {b.start_date} → {b.end_date} ({b.total_days} kun)
+                      <span style={{ display:"flex", alignItems:"center", gap:3 }}><Calendar size={10}/> {b.start_date} → {b.end_date} ({b.total_days} kun)</span>
                     </div>
                     <div style={{ fontSize:12, fontWeight:700, color:"#059669", marginBottom:3 }}>
                       {fmtPrice(b.total_price)}
@@ -870,8 +879,8 @@ export default function OperatorPage({ onBack, user }) {
                       <button onClick={() => setConfirmDlg({ type:"cancel-booking", d:b })}
                         style={{ padding:"6px 12px", borderRadius:8, border:"none",
                                  background:"#FEF2F2", color:C.danger, fontSize:11, fontWeight:700,
-                                 cursor:"pointer" }}>
-                        ✕ Bekor qilish
+                                 cursor:"pointer", display:"flex", alignItems:"center", gap:3 }}>
+                        <X size={12}/> Bekor qilish
                       </button>
                     )}
                   </div>
@@ -934,6 +943,48 @@ export default function OperatorPage({ onBack, user }) {
         {/* ── OPERATORLAR ────────────────────────────── */}
         {!loading && tab === "operators" && isMainOp && (
           <div>
+
+            {/* Arenda feature toggle */}
+            <div style={{ background:"white", borderRadius:14, border:`1px solid ${C.border}`,
+                          padding:"14px 16px", marginBottom:14 }}>
+              <div style={{ fontSize:12, fontWeight:800, color:C.textMuted,
+                            textTransform:"uppercase", letterSpacing:1, marginBottom:10 }}>
+                Ilovani boshqarish
+              </div>
+              <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+                <div>
+                  <div style={{ fontSize:14, fontWeight:800, color:C.text,
+                                display:"flex", alignItems:"center", gap:6 }}>
+                    <Home size={15} color="#059669" /> Arenda bo'limi
+                  </div>
+                  <div style={{ fontSize:11, color:C.textMuted, marginTop:2 }}>
+                    {arendaEnabled ? "Hozir yoqilgan — foydalanuvchilar ko'radi" : "Hozir o'chirilgan — MVP rejimi"}
+                  </div>
+                </div>
+                <button
+                  onClick={async () => {
+                    const next = !arendaEnabled;
+                    try {
+                      await settingsAPI.set("arenda_enabled", String(next));
+                      setArendaEnabled?.(next);
+                      toast$(next ? "Arenda yoqildi ✓" : "Arenda o'chirildi");
+                    } catch {
+                      toast$("Xatolik yuz berdi");
+                    }
+                  }}
+                  style={{ width:52, height:28, borderRadius:14, border:"none",
+                           background: arendaEnabled ? "#059669" : "#D1D5DB",
+                           cursor:"pointer", position:"relative", transition:"background 0.2s",
+                           flexShrink:0 }}>
+                  <div style={{ position:"absolute", top:3,
+                                left: arendaEnabled ? 26 : 3,
+                                width:22, height:22, borderRadius:"50%",
+                                background:"white", transition:"left 0.2s",
+                                boxShadow:"0 1px 3px rgba(0,0,0,0.25)" }} />
+                </button>
+              </div>
+            </div>
+
             <button onClick={() => setAddOpDlg(true)}
               style={{ width:"100%", padding:"11px", borderRadius:12, border:"none",
                        background:C.primaryDark, color:"white", fontSize:13, fontWeight:800,

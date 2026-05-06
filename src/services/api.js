@@ -225,6 +225,14 @@ export const rentalsAPI = {
     apiFetch(`${BASE}/rentals/bookings/${bookingId}`, { method: "DELETE", headers: headers() }).then(handle),
 };
 
+// ─── SETTINGS (feature flags) ─────────────────────────────────────
+export const settingsAPI = {
+  get: (key) =>
+    apiFetch(`${BASE}/settings/${key}`, { headers: headers() }).then(handle).catch(() => ({ value: null })),
+  set: (key, value) =>
+    apiFetch(`${BASE}/settings/${key}`, { method: "PUT", headers: headers(), body: JSON.stringify({ value }) }).then(handle),
+};
+
 // ─── PAYMENTS ─────────────────────────────────────────────────────
 export const paymentsAPI = {
   send: (body) =>

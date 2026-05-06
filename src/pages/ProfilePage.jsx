@@ -8,6 +8,7 @@ import {
   Package, Inbox, Trash2,
   Pencil, Check, LogOut, Lock, CreditCard,
   User, Send, MapPin, Wallet, Clock, AlertCircle, CheckCircle, XCircle, Eye,
+  Home, Calendar, BookOpen, X,
 } from "lucide-react";
 
 function StatusBadge({ status, rejectReason }) {
@@ -95,7 +96,7 @@ export default function ProfilePage({ user, setUser, myProducts, offers = [],
                     marginBottom:18, gap:4, border:`1px solid ${C.border}` }}>
         {[
           ["profile", <User size={14}/>, "Profil"],
-          ["rentals", <span style={{fontSize:14}}>🏠</span>, "Arenda"],
+          ["rentals", <Home size={14}/>, "Arenda"],
           ["payment", <CreditCard size={14}/>, "To'lovlar"],
         ].map(([tab, icon, lbl]) => (
           <button key={tab} onClick={() => setActiveTab(tab)} style={{
@@ -116,14 +117,14 @@ export default function ProfilePage({ user, setUser, myProducts, offers = [],
           {/* My rental listings */}
           <div style={{ display:"flex", alignItems:"center", gap:7, fontSize:14,
                         fontWeight:800, color:C.text, marginBottom:12 }}>
-            🏠 Mening arenda e'lonlarim
+            <Home size={16} color="#059669" /> Mening arenda e'lonlarim
           </div>
 
           {myRentals.filter(r => r.status !== "deleted").length === 0 ? (
             <div style={{ textAlign:"center", padding:"24px 16px", color:C.textMuted,
                           background:C.card, borderRadius:16, border:`1px solid #D1FAE5`,
                           marginBottom:20 }}>
-              <div style={{ fontSize:28, marginBottom:6 }}>🏠</div>
+              <Home size={28} color={C.textMuted} style={{ marginBottom:6 }} />
               <div style={{ fontSize:13, fontWeight:700 }}>Arenda e'lonlar yo'q</div>
               <div style={{ fontSize:11, marginTop:3 }}>Bosh sahifada "Arenda" tabida e'lon qo'shing</div>
             </div>
@@ -141,7 +142,7 @@ export default function ProfilePage({ user, setUser, myProducts, offers = [],
                                   display:"flex", alignItems:"center", justifyContent:"center" }}>
                       {r.photo
                         ? <img src={r.photo} alt={r.name} style={{ width:76, height:"100%", objectFit:"cover" }} />
-                        : <span style={{fontSize:28}}>🏠</span>
+                        : <Home size={28} color="#6EE7B7" />
                       }
                     </div>
                     <div style={{ flex:1, padding:"10px 12px", minWidth:0 }}>
@@ -170,13 +171,13 @@ export default function ProfilePage({ user, setUser, myProducts, offers = [],
           {/* My bookings as renter */}
           <div style={{ display:"flex", alignItems:"center", gap:7, fontSize:14,
                         fontWeight:800, color:C.text, marginBottom:12 }}>
-            📋 Mening bronlarim
+            <BookOpen size={16} color={C.primaryDark} /> Mening bronlarim
           </div>
 
           {myBookings.length === 0 ? (
             <div style={{ textAlign:"center", padding:"24px 16px", color:C.textMuted,
                           background:C.card, borderRadius:16, border:`1px solid ${C.border}` }}>
-              <div style={{ fontSize:28, marginBottom:6 }}>📅</div>
+              <Calendar size={28} color={C.textMuted} style={{ marginBottom:6 }} />
               <div style={{ fontSize:13, fontWeight:700 }}>Hali bronlar yo'q</div>
               <div style={{ fontSize:11, marginTop:3 }}>Arenda buyumlarini kalandarda bronlang</div>
             </div>
@@ -196,8 +197,8 @@ export default function ProfilePage({ user, setUser, myProducts, offers = [],
                     </span>
                   </div>
                   <div style={{ display:"flex", gap:10, fontSize:11, color:C.textSub, marginBottom:6, flexWrap:"wrap" }}>
-                    <span>📅 {b.startDate} → {b.endDate}</span>
-                    <span>📆 {b.totalDays} kun</span>
+                    <span style={{ display:"flex", alignItems:"center", gap:3 }}><Calendar size={10}/> {b.startDate} → {b.endDate}</span>
+                    <span style={{ display:"flex", alignItems:"center", gap:3 }}><Calendar size={10}/> {b.totalDays} kun</span>
                   </div>
                   <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
                     <div>
@@ -216,7 +217,7 @@ export default function ProfilePage({ user, setUser, myProducts, offers = [],
                                  background:"#FEF2F2", color:"#EF4444",
                                  fontSize:11, fontWeight:700, cursor:"pointer",
                                  display:"flex", alignItems:"center", gap:4 }}>
-                        {cancellingId === b.id ? "..." : "✕ Bekor"}
+                        {cancellingId === b.id ? "..." : <><X size={12}/> Bekor</>}
                       </button>
                     )}
                   </div>
@@ -342,13 +343,15 @@ export default function ProfilePage({ user, setUser, myProducts, offers = [],
         {/* Stats */}
         <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:8, marginBottom:18 }}>
           {[
-            ["📦", myProducts.filter(p => p.status !== "deleted").length, "E'lonlarim"],
-            ["🏠", myRentals.filter(r => r.status !== "deleted").length,  "Arendalarim"],
-            ["📅", myBookings.length,                                      "Bronlarim"],
-          ].map(([emoji, v, l]) => (
+            [Package,  myProducts.filter(p => p.status !== "deleted").length, "E'lonlarim"],
+            [Home,     myRentals.filter(r => r.status !== "deleted").length,  "Arendalarim"],
+            [Calendar, myBookings.length,                                      "Bronlarim"],
+          ].map(([Icon, v, l]) => (
             <div key={l} style={{ background:C.card, borderRadius:16, padding:"12px 8px",
                                   textAlign:"center", border:`1px solid ${C.border}`, boxShadow:C.shadow }}>
-              <div style={{ fontSize:20, marginBottom:3 }}>{emoji}</div>
+              <div style={{ display:"flex", justifyContent:"center", marginBottom:3 }}>
+                <Icon size={20} color={C.primaryDark} />
+              </div>
               <div style={{ fontSize:20, fontWeight:900, color:C.primaryDark }}>{v}</div>
               <div style={{ fontSize:9, color:C.textMuted }}>{l}</div>
             </div>
@@ -357,7 +360,7 @@ export default function ProfilePage({ user, setUser, myProducts, offers = [],
 
         {/* My listings — show all statuses */}
         <div style={{ display:"flex", alignItems:"center", gap:7, fontSize:14, fontWeight:800, color:C.text, marginBottom:12 }}>
-          📦 Mening e'lonlarim
+          <Package size={16} color={C.primaryDark} /> Mening e'lonlarim
         </div>
 
         {/* Hide self-deleted products; still show operator-rejected ones */}
@@ -405,7 +408,7 @@ export default function ProfilePage({ user, setUser, myProducts, offers = [],
                         <span style={{ fontSize:9, fontWeight:800, padding:"2px 7px", borderRadius:7,
                                        background:"#E8F2FD", color:"#3A85C8",
                                        display:"inline-flex", alignItems:"center", gap:2 }}>
-                          📨 {cnt} taklif
+                          <Inbox size={9} /> {cnt} taklif
                         </span>
                       ) : null;
                     })()}

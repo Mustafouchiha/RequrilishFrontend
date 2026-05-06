@@ -16,6 +16,7 @@ import {
   Tag, Home, Plus, Camera, AlertCircle, Rocket,
   ChevronDown, X, ArrowLeft, ArrowRight, MapPin, Trash2, RefreshCw,
   Eye, Heart,
+  ShoppingBag, Inbox, DollarSign, Wrench, Building2, Layers, Box, Calendar,
 } from "lucide-react";
 
 export default function HomePage({
@@ -24,6 +25,7 @@ export default function HomePage({
   rentals = [], setRentals,
   onNavChange, homeAction, setHomeAction,
   onProductAdded, onDelete, isOperator = false, loggedIn, onRequireAuth,
+  arendaEnabled = false,
 }) {
   const [search,      setSearch]      = useState("");
   const [activeCats,  setActiveCats]  = useState([]);
@@ -365,16 +367,17 @@ export default function HomePage({
       <div style={{ display:"flex", margin:"8px 16px 0", borderRadius:14, overflow:"hidden",
                     border:`1px solid ${C.border}`, background:C.card }}>
         {[
-          { key:"sotuvda", label:"🛒 Sotuvda" },
-          { key:"arenda",  label:"🏠 Arenda" },
+          { key:"sotuvda", icon:<ShoppingBag size={14}/>, label:"Sotuvda" },
+          ...(arendaEnabled ? [{ key:"arenda", icon:<Home size={14}/>, label:"Arenda" }] : []),
         ].map(t => (
           <button key={t.key} onClick={() => setMainTab(t.key)}
             style={{ flex:1, padding:"10px 0", border:"none", fontFamily:"inherit",
                      fontSize:13, fontWeight:800, cursor:"pointer",
                      background: mainTab===t.key ? C.primaryDark : "transparent",
                      color: mainTab===t.key ? "white" : C.textSub,
-                     transition:"all 0.15s" }}>
-            {t.label}
+                     transition:"all 0.15s",
+                     display:"flex", alignItems:"center", justifyContent:"center", gap:5 }}>
+            {t.icon} {t.label}
           </button>
         ))}
       </div>
@@ -396,20 +399,28 @@ export default function HomePage({
       )}
 
       {/* Category pills — Arenda */}
-      {mainTab === "arenda" && (
-        <div style={{ padding:"10px 16px", display:"flex", flexWrap:"wrap", gap:7 }}>
-          {RENTAL_CATS.map(cat => {
-            if (cat === "Barchasi") return <Pill key={cat} active={activRentalCats.length===0} onClick={() => setActivRentalCats([])}>Barchasi</Pill>;
-            const isActive = activRentalCats.includes(cat);
-            return (
-              <Pill key={cat} active={isActive} onClick={() => setActivRentalCats(prev =>
-                prev.includes(cat) ? prev.filter(c=>c!==cat) : [...prev, cat])}>
-                {RENTAL_CAT_ICO[cat]} {cat}
-              </Pill>
-            );
-          })}
-        </div>
-      )}
+      {mainTab === "arenda" && (() => {
+        const RENTAL_CAT_ICON = {
+          "asbob-uskuna":      <Wrench size={12}/>,
+          "qurilish texnikasi":<Building2 size={12}/>,
+          "iskala":            <Layers size={12}/>,
+          "boshqa":            <Box size={12}/>,
+        };
+        return (
+          <div style={{ padding:"10px 16px", display:"flex", flexWrap:"wrap", gap:7 }}>
+            {RENTAL_CATS.map(cat => {
+              if (cat === "Barchasi") return <Pill key={cat} active={activRentalCats.length===0} onClick={() => setActivRentalCats([])}>Barchasi</Pill>;
+              const isActive = activRentalCats.includes(cat);
+              return (
+                <Pill key={cat} active={isActive} onClick={() => setActivRentalCats(prev =>
+                  prev.includes(cat) ? prev.filter(c=>c!==cat) : [...prev, cat])}>
+                  {RENTAL_CAT_ICON[cat]} {cat}
+                </Pill>
+              );
+            })}
+          </div>
+        );
+      })()}
 
       {isLocOn && (
         <div style={{ padding:"0 16px 8px" }}>
@@ -458,8 +469,9 @@ export default function HomePage({
               <button onClick={() => { setRentalForm(EMPTY_RENTAL_FORM||{}); setRentalStep(1); setShowAddRental(true); }}
                 style={{ fontSize:11, fontWeight:700, color:"#059669",
                          background:"#D1FAE5", border:"1px solid #6EE7B7",
-                         borderRadius:10, padding:"5px 12px", cursor:"pointer", fontFamily:"inherit" }}>
-                + Arenda qo'sh
+                         borderRadius:10, padding:"5px 12px", cursor:"pointer", fontFamily:"inherit",
+                         display:"flex", alignItems:"center", gap:4 }}>
+                <Plus size={12}/> Arenda qo'sh
               </button>
             )}
           </div>
@@ -470,7 +482,9 @@ export default function HomePage({
           </div>
           {filteredRentals.length===0 && (
             <div style={{ textAlign:"center", padding:"60px 20px", color:C.textMuted }}>
-              <div style={{ fontSize:36, marginBottom:10 }}>🏠</div>
+              <div style={{ display:"flex", justifyContent:"center", marginBottom:10 }}>
+                <Home size={36} color={C.textMuted} />
+              </div>
               <div style={{ fontSize:14, fontWeight:700 }}>Arenda yo'q</div>
               <div style={{ fontSize:11, marginTop:4 }}>Hozircha arenda e'lonlari yo'q</div>
             </div>
@@ -733,16 +747,17 @@ export default function HomePage({
           <div style={{ display:"flex", gap:0, marginBottom:14, borderRadius:12, overflow:"hidden",
                         border:`1px solid ${C.border}` }}>
             {[
-              { key:"received", label:`📥 Keldi (${myNotifs.length})` },
-              { key:"sent",     label:`📤 Yuborilgan (${sentOffers.length})` },
+              { key:"received", icon:<Inbox size={12}/>, label:`Keldi (${myNotifs.length})` },
+              { key:"sent",     icon:<Send size={12}/>,  label:`Yuborilgan (${sentOffers.length})` },
             ].map(t => (
               <button key={t.key} onClick={() => setNotifTab(t.key)}
                 style={{ flex:1, padding:"9px 4px", border:"none", fontFamily:"inherit",
                          fontSize:12, fontWeight:700, cursor:"pointer",
                          background: notifTab===t.key ? C.primaryDark : "white",
                          color: notifTab===t.key ? "white" : C.textSub,
-                         transition:"all 0.15s" }}>
-                {t.label}
+                         transition:"all 0.15s",
+                         display:"flex", alignItems:"center", justifyContent:"center", gap:4 }}>
+                {t.icon} {t.label}
               </button>
             ))}
           </div>
@@ -800,8 +815,9 @@ export default function HomePage({
                       style={{ flex:1, padding:"10px 12px", borderRadius:12,
                                background:`linear-gradient(135deg,${C.primary},${C.primaryDark})`,
                                border:"none", color:"white", fontSize:12, fontWeight:900,
-                               cursor:"pointer", fontFamily:"inherit" }}>
-                      💰 5% to'lovni amalga oshirish
+                               cursor:"pointer", fontFamily:"inherit",
+                               display:"flex", alignItems:"center", justifyContent:"center", gap:5 }}>
+                      <DollarSign size={13}/> 5% to'lovni amalga oshirish
                     </button>
                     <button onClick={async () => {
                         try { await offersAPI.cancel(o.id); setOffers(prev => prev.filter(x => x.id !== o.id)); }
@@ -1224,11 +1240,14 @@ export default function HomePage({
             {selectedRental.photos?.length > 0
               ? <img src={selectedRental.photos[0]} alt={selectedRental.name}
                   style={{ width:"100%", height:"100%", objectFit:"cover" }} />
-              : <span style={{ fontSize:48 }}>🏠</span>
+              : <Home size={48} color="#6EE7B7" />
             }
             <div style={{ position:"absolute", top:8, left:8, background:"#059669",
                           color:"white", fontSize:10, fontWeight:800,
-                          padding:"3px 10px", borderRadius:10 }}>🏠 Arenda</div>
+                          padding:"3px 10px", borderRadius:10,
+                          display:"flex", alignItems:"center", gap:4 }}>
+              <Home size={10}/> Arenda
+            </div>
           </div>
 
           <div style={{ fontSize:19, fontWeight:900, color:C.text, marginBottom:6 }}>{selectedRental.name}</div>
@@ -1279,8 +1298,9 @@ export default function HomePage({
           ) : (
             <>
               {/* Calendar */}
-              <div style={{ fontSize:13, fontWeight:800, color:C.text, marginBottom:10 }}>
-                📅 Sana tanlang
+              <div style={{ fontSize:13, fontWeight:800, color:C.text, marginBottom:10,
+                            display:"flex", alignItems:"center", gap:5 }}>
+                <Calendar size={13}/> Sana tanlang
               </div>
               <BookingCalendar
                 bookedRanges={bookedDates}
@@ -1328,7 +1348,8 @@ export default function HomePage({
                   disabled={!bookingStart || !bookingEnd || bookingLoading}>
                   {bookingLoading
                     ? <><Loader2 size={15} className="spin" /> Band qilinmoqda...</>
-                    : "📅 Zakaz berish"
+                    : <><Calendar size={14}/> Zakaz berish</>
+
                   }
                 </BtnPrimary>
               </div>
@@ -1342,7 +1363,7 @@ export default function HomePage({
         <Sheet onClose={() => { setShowAddRental(false); setRentalStep(1); }} maxH="92vh">
           <div style={{ fontSize:15, fontWeight:800, color:C.text, marginBottom:14,
                         display:"flex", alignItems:"center", gap:7 }}>
-            🏠 Arenda e'loni qo'shish
+            <Home size={15}/> Arenda e'loni qo'shish
             <span style={{ fontSize:11, color:C.textMuted, fontWeight:400 }}>({rentalStep}/3)</span>
           </div>
 
@@ -1367,9 +1388,14 @@ export default function HomePage({
 
               <Lbl>Kategoriya</Lbl>
               <div style={{ display:"flex", flexWrap:"wrap", gap:6, marginBottom:14 }}>
-                {["asbob-uskuna","qurilish texnikasi","iskala","boshqa"].map(c => (
+                {[
+                  ["asbob-uskuna",       <Wrench size={12}/>],
+                  ["qurilish texnikasi", <Building2 size={12}/>],
+                  ["iskala",             <Layers size={12}/>],
+                  ["boshqa",             <Box size={12}/>],
+                ].map(([c, ico]) => (
                   <Pill key={c} active={rentalForm.category===c} onClick={() => rf("category")(c)}>
-                    {RENTAL_CAT_ICO[c]} {c}
+                    {ico} {c}
                   </Pill>
                 ))}
               </div>

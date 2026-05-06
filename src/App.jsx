@@ -4,8 +4,8 @@ import HomePage from "./pages/HomePage";
 import ProfilePage from "./pages/ProfilePage";
 import OperatorPage from "./pages/OperatorPage";
 import { C } from "./constants";
-import { getToken, setToken, clearAuth, productsAPI, offersAPI, authAPI, ping, rentalsAPI } from "./services/api";
-import { Home, Plus } from "lucide-react";
+import { getToken, setToken, clearAuth, productsAPI, offersAPI, authAPI, ping, rentalsAPI, settingsAPI } from "./services/api";
+import { Home, Plus, Building2, WifiOff } from "lucide-react";
 
 const OPERATOR_PHONES = ["331350206"];
 const phoneCore = (v) => {
@@ -37,7 +37,7 @@ function LoadingSplash() {
                     display:"flex", alignItems:"center", justifyContent:"center",
                     fontSize:34, boxShadow:`0 8px 24px rgba(244,137,74,0.4)`,
                     animation:"pulse 1.5s ease-in-out infinite" }}>
-        🏗
+        <Building2 size={34} color="white" />
       </div>
       <div style={{ fontSize:18, fontWeight:800, color:C.text, fontFamily:"'Nunito','Segoe UI',sans-serif" }}>
         ReQurilish
@@ -70,9 +70,10 @@ export default function App() {
   const [rentals,     setRentals]     = useState([]);
   const [myRentals,   setMyRentals]   = useState([]);
   const [myBookings,  setMyBookings]  = useState([]);
-  const [homeAction,  setHomeAction]  = useState(null);
-  const [loading,     setLoading]     = useState(false);
-  const [offline,     setOffline]     = useState(false);
+  const [homeAction,     setHomeAction]     = useState(null);
+  const [loading,        setLoading]        = useState(false);
+  const [offline,        setOffline]        = useState(false);
+  const [arendaEnabled,  setArendaEnabled]  = useState(false);
   const pollRef = useRef(null);
 
   const loggedIn = !!user && !!getToken();
@@ -118,6 +119,13 @@ export default function App() {
     const warmup  = [3000, 7000, 13000, 20000, 30000].map(d => setTimeout(ping, d));
     const keepAlive = setInterval(ping, 4 * 60 * 1000); // 4 daqiqada 1 marta
     return () => { warmup.forEach(clearTimeout); clearInterval(keepAlive); };
+  }, []);
+
+  // Arenda feature flag
+  useEffect(() => {
+    settingsAPI.get("arenda_enabled").then(({ value }) => {
+      setArendaEnabled(value === "true");
+    }).catch(() => {});
   }, []);
 
   // Auto-login silently in background
@@ -312,7 +320,7 @@ export default function App() {
                       justifyContent:"space-between", gap:10, boxSizing:"border-box",
                       boxShadow:"0 2px 12px rgba(239,68,68,0.4)" }}>
           <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-            <span style={{ fontSize:16 }}>🔴</span>
+            <WifiOff size={16} color="white" />
             <div>
               <div style={{ fontSize:12, fontWeight:800 }}>Server ishlamayapti</div>
               <div style={{ fontSize:10, opacity:0.85 }}>Ulanish yo'q</div>
@@ -337,6 +345,7 @@ export default function App() {
           onNavChange={setNav} homeAction={homeAction} setHomeAction={setHomeAction}
           onProductAdded={handleAddProduct} loggedIn={false}
           onRequireAuth={() => setNav("login")}
+          arendaEnabled={arendaEnabled}
         />
       )}
       {!loggedIn && nav !== "home" && nav !== "login" && (
@@ -345,7 +354,10 @@ export default function App() {
 
       {/* Logged in: operator */}
       {loggedIn && nav === "operator" && (
-        <OperatorPage onBack={() => setNav("profile")} user={user} />
+        <OperatorPage
+          onBack={() => setNav("profile")} user={user}
+          arendaEnabled={arendaEnabled} setArendaEnabled={setArendaEnabled}
+        />
       )}
 
       {/* Logged in: profile */}
@@ -376,6 +388,7 @@ export default function App() {
             onProductAdded={handleAddProduct} onDelete={handleDeleteProduct}
             isOperator={isOperator(user)} loggedIn={true}
             onRequireAuth={() => setNav("login")}
+            arendaEnabled={arendaEnabled}
           />
           <BottomNav />
         </>

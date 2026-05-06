@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { C } from "../constants";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 const MONTHS_UZ = ["Yanvar","Fevral","Mart","Aprel","May","Iyun","Iyul","Avgust","Sentyabr","Oktyabr","Noyabr","Dekabr"];
 const DAYS_UZ   = ["Du","Se","Ch","Pa","Ju","Sh","Ya"];
@@ -78,8 +79,8 @@ export default function BookingCalendar({ bookedRanges = [], startDate, endDate,
         <button onClick={prevMonth}
           style={{ background:"none", border:`1px solid ${C.border}`, borderRadius:8, width:32, height:32,
                    cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center",
-                   fontSize:16, color:C.textSub, fontFamily:"inherit" }}>
-          ‹
+                   color:C.textSub, fontFamily:"inherit" }}>
+          <ChevronLeft size={16} />
         </button>
         <span style={{ fontSize:14, fontWeight:800, color:C.text }}>
           {MONTHS_UZ[viewMonth]} {viewYear}
@@ -87,8 +88,8 @@ export default function BookingCalendar({ bookedRanges = [], startDate, endDate,
         <button onClick={nextMonth}
           style={{ background:"none", border:`1px solid ${C.border}`, borderRadius:8, width:32, height:32,
                    cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center",
-                   fontSize:16, color:C.textSub, fontFamily:"inherit" }}>
-          ›
+                   color:C.textSub, fontFamily:"inherit" }}>
+          <ChevronRight size={16} />
         </button>
       </div>
 
