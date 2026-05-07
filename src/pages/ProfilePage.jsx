@@ -38,7 +38,7 @@ function StatusBadge({ status, rejectReason }) {
 
 export default function ProfilePage({ user, setUser, myProducts, offers = [],
   myRentals = [], setMyRentals, myBookings = [], setMyBookings,
-  onDelete, onLogout, isOperator, onOpenOperator }) {
+  onDelete, onLogout, isOperator, onOpenOperator, arendaEnabled = false }) {
   const [editMode,    setEditMode]    = useState(false);
   const [draft,       setDraft]       = useState({ name: user.name, avatar: user.avatar });
   const [saving,      setSaving]      = useState(false);
@@ -96,7 +96,7 @@ export default function ProfilePage({ user, setUser, myProducts, offers = [],
                     marginBottom:18, gap:4, border:`1px solid ${C.border}` }}>
         {[
           ["profile", <User size={14}/>, "Profil"],
-          ["rentals", <Home size={14}/>, "Arenda"],
+          ...(arendaEnabled ? [["rentals", <Home size={14}/>, "Arenda"]] : []),
           ["payment", <CreditCard size={14}/>, "To'lovlar"],
         ].map(([tab, icon, lbl]) => (
           <button key={tab} onClick={() => setActiveTab(tab)} style={{
@@ -112,7 +112,7 @@ export default function ProfilePage({ user, setUser, myProducts, offers = [],
       {activeTab === "payment" && <PaymentPage user={user} embedded />}
 
       {/* ─── ARENDA TAB ────────────────────────────────────── */}
-      {activeTab === "rentals" && (
+      {activeTab === "rentals" && arendaEnabled && (
         <div>
           {/* My rental listings */}
           <div style={{ display:"flex", alignItems:"center", gap:7, fontSize:14,
@@ -341,11 +341,13 @@ export default function ProfilePage({ user, setUser, myProducts, offers = [],
         </div>
 
         {/* Stats */}
-        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:8, marginBottom:18 }}>
+        <div style={{ display:"grid", gridTemplateColumns: arendaEnabled ? "1fr 1fr 1fr" : "1fr 1fr", gap:8, marginBottom:18 }}>
           {[
             [Package,  myProducts.filter(p => p.status !== "deleted").length, "E'lonlarim"],
-            [Home,     myRentals.filter(r => r.status !== "deleted").length,  "Arendalarim"],
-            [Calendar, myBookings.length,                                      "Bronlarim"],
+            ...(arendaEnabled ? [
+              [Home,     myRentals.filter(r => r.status !== "deleted").length,  "Arendalarim"],
+              [Calendar, myBookings.length,                                      "Bronlarim"],
+            ] : []),
           ].map(([Icon, v, l]) => (
             <div key={l} style={{ background:C.card, borderRadius:16, padding:"12px 8px",
                                   textAlign:"center", border:`1px solid ${C.border}`, boxShadow:C.shadow }}>

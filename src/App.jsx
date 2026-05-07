@@ -371,6 +371,7 @@ export default function App() {
             onDelete={handleDeleteProduct}
             onLogout={handleLogout} isOperator={isOperator(user)}
             onOpenOperator={() => setNav("operator")}
+            arendaEnabled={arendaEnabled}
           />
           <BottomNav />
         </>
