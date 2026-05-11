@@ -26,7 +26,7 @@ function formatPhone(raw) {
   return `${d.slice(0,2)} ${d.slice(2,5)} ${d.slice(5,7)} ${d.slice(7)}`;
 }
 
-export default function LoginPage({ onLogin }) {
+export default function LoginPage({ onLogin, appLogo = "" }) {
   const [step,    setStep]    = useState(1);
   const [phone,   setPhone]   = useState("");
   const [code,    setCode]    = useState("");
@@ -117,7 +117,7 @@ export default function LoginPage({ onLogin }) {
       alignItems:"center", justifyContent:"center", padding:"32px 20px",
     }}>
       {/* Logo */}
-      <div style={{ marginBottom:12 }}><Logo size={72} /></div>
+      <div style={{ marginBottom:12 }}><Logo size={72} src={appLogo} /></div>
       <div style={{ fontSize:26, fontWeight:900, color:C.text, marginBottom:2 }}>ReQurilish</div>
       <div style={{ fontSize:12, color:C.textMuted, marginBottom:24, textAlign:"center" }}>
         Qurilish materiallari bozori

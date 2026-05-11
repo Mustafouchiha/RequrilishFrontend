@@ -25,7 +25,7 @@ export default function HomePage({
   rentals = [], setRentals,
   onNavChange, homeAction, setHomeAction,
   onProductAdded, onDelete, isOperator = false, loggedIn, onRequireAuth,
-  arendaEnabled = false,
+  arendaEnabled = false, appLogo = "",
 }) {
   const [search,      setSearch]      = useState("");
   const [activeCats,  setActiveCats]  = useState([]);
@@ -316,7 +316,7 @@ export default function HomePage({
         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12 }}>
           <div>
             <div style={{ display:"flex", alignItems:"center", gap:7 }}>
-              <Logo size={32} />
+              <Logo size={32} src={appLogo} />
               <span style={{ fontSize:20, fontWeight:900, color:C.text, letterSpacing:"-0.4px" }}>ReQurilish</span>
             </div>
             <div style={{ fontSize:10, color:C.textMuted, marginTop:1 }}>Qayta ishlangan qurilish materiallari</div>

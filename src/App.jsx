@@ -74,6 +74,7 @@ export default function App() {
   const [loading,        setLoading]        = useState(false);
   const [offline,        setOffline]        = useState(false);
   const [arendaEnabled,  setArendaEnabled]  = useState(false);
+  const [appLogo,        setAppLogo]        = useState("");
   const pollRef = useRef(null);
 
   const loggedIn = !!user && !!getToken();
@@ -121,11 +122,15 @@ export default function App() {
     return () => { warmup.forEach(clearTimeout); clearInterval(keepAlive); };
   }, []);
 
-  // Arenda feature flag
+  // App settings (arenda flag + logo)
   useEffect(() => {
-    settingsAPI.get("arenda_enabled").then(({ value }) => {
-      setArendaEnabled(value === "true");
-    }).catch(() => {});
+    Promise.all([
+      settingsAPI.get("arenda_enabled").catch(() => ({ value: "false" })),
+      settingsAPI.get("app_logo").catch(() => ({ value: "" })),
+    ]).then(([arenda, logo]) => {
+      setArendaEnabled(arenda.value === "true");
+      setAppLogo(logo.value || "");
+    });
   }, []);
 
   // Auto-login silently in background
@@ -345,11 +350,11 @@ export default function App() {
           onNavChange={setNav} homeAction={homeAction} setHomeAction={setHomeAction}
           onProductAdded={handleAddProduct} loggedIn={false}
           onRequireAuth={() => setNav("login")}
-          arendaEnabled={arendaEnabled}
+          arendaEnabled={arendaEnabled} appLogo={appLogo}
         />
       )}
       {!loggedIn && nav !== "home" && nav !== "login" && (
-        <LoginPage onLogin={handleLogin} />
+        <LoginPage onLogin={handleLogin} appLogo={appLogo} />
       )}
 
       {/* Logged in: operator */}
@@ -357,6 +362,7 @@ export default function App() {
         <OperatorPage
           onBack={() => setNav("profile")} user={user}
           arendaEnabled={arendaEnabled} setArendaEnabled={setArendaEnabled}
+          appLogo={appLogo} setAppLogo={setAppLogo}
         />
       )}
 
@@ -389,7 +395,7 @@ export default function App() {
             onProductAdded={handleAddProduct} onDelete={handleDeleteProduct}
             isOperator={isOperator(user)} loggedIn={true}
             onRequireAuth={() => setNav("login")}
-            arendaEnabled={arendaEnabled}
+            arendaEnabled={arendaEnabled} appLogo={appLogo}
           />
           <BottomNav />
         </>

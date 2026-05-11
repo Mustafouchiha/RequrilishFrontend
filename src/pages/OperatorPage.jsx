@@ -8,7 +8,7 @@ import {
   AlertTriangle, RefreshCw, PlusCircle, MinusCircle,
   Shield, UserPlus, UserMinus, Wallet, Clock,
   Pencil, ToggleLeft, ToggleRight, Heart,
-  Home, Check, X, FolderOpen, Calendar,
+  Home, Check, X, FolderOpen, Calendar, Camera,
 } from "lucide-react";
 
 const phoneCore = (v) => String(v || "").replace(/\D/g, "").slice(-9);
@@ -281,7 +281,7 @@ const TABS = [
   { key:"operators", Icon:Shield,      label:"Operator" },
 ];
 
-export default function OperatorPage({ onBack, user, arendaEnabled = false, setArendaEnabled }) {
+export default function OperatorPage({ onBack, user, arendaEnabled = false, setArendaEnabled, appLogo = "", setAppLogo }) {
   const isMainOp = phoneCore(user?.phone) === "331350206";
   const visibleTabs = isMainOp ? TABS : TABS.filter(t => t.key !== "operators");
 
@@ -943,6 +943,82 @@ export default function OperatorPage({ onBack, user, arendaEnabled = false, setA
         {/* ── OPERATORLAR ────────────────────────────── */}
         {!loading && tab === "operators" && isMainOp && (
           <div>
+
+            {/* Logo yuklash */}
+            <div style={{ background:"white", borderRadius:14, border:`1px solid ${C.border}`,
+                          padding:"14px 16px", marginBottom:14 }}>
+              <div style={{ fontSize:12, fontWeight:800, color:C.textMuted,
+                            textTransform:"uppercase", letterSpacing:1, marginBottom:12 }}>
+                Ilova logosi
+              </div>
+              <div style={{ display:"flex", alignItems:"center", gap:14 }}>
+                {/* Preview */}
+                <div style={{ width:64, height:64, borderRadius:14, border:`2px solid ${C.border}`,
+                              background:"#F9FAFB", display:"flex", alignItems:"center",
+                              justifyContent:"center", overflow:"hidden", flexShrink:0 }}>
+                  {appLogo
+                    ? <img src={appLogo} alt="logo" style={{ width:"100%", height:"100%", objectFit:"contain" }} />
+                    : <span style={{ fontSize:22, color:C.textMuted }}>—</span>
+                  }
+                </div>
+                <div style={{ flex:1 }}>
+                  <div style={{ fontSize:12, fontWeight:700, color:C.text, marginBottom:6 }}>
+                    {appLogo ? "Logo o'rnatilgan" : "Logo o'rnatilmagan"}
+                  </div>
+                  <div style={{ display:"flex", gap:7 }}>
+                    {/* Yuklash */}
+                    <label style={{ padding:"7px 14px", borderRadius:10, background:C.primaryDark,
+                                    color:"white", fontSize:11, fontWeight:700, cursor:"pointer",
+                                    display:"flex", alignItems:"center", gap:5 }}>
+                      <Camera size={12}/> Yuklash
+                      <input type="file" accept="image/*" style={{ display:"none" }}
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          const reader = new FileReader();
+                          reader.onload = async (ev) => {
+                            const img = new Image();
+                            img.onload = async () => {
+                              const SZ = 256;
+                              let { width, height } = img;
+                              if (width > height) { height = Math.round(height * SZ / width); width = SZ; }
+                              else { width = Math.round(width * SZ / height); height = SZ; }
+                              const canvas = document.createElement("canvas");
+                              canvas.width = width; canvas.height = height;
+                              canvas.getContext("2d").drawImage(img, 0, 0, width, height);
+                              const dataUrl = canvas.toDataURL("image/png", 0.9);
+                              try {
+                                await settingsAPI.set("app_logo", dataUrl);
+                                setAppLogo?.(dataUrl);
+                                toast$("Logo saqlandi ✓");
+                              } catch { toast$("Xatolik yuz berdi"); }
+                            };
+                            img.src = ev.target.result;
+                          };
+                          reader.readAsDataURL(file);
+                          e.target.value = "";
+                        }}
+                      />
+                    </label>
+                    {/* O'chirish */}
+                    {appLogo && (
+                      <button onClick={async () => {
+                          try {
+                            await settingsAPI.set("app_logo", "");
+                            setAppLogo?.("");
+                            toast$("Logo o'chirildi");
+                          } catch { toast$("Xatolik"); }
+                        }}
+                        style={{ padding:"7px 12px", borderRadius:10, border:"none",
+                                 background:"#FEF2F2", color:C.danger, cursor:"pointer",
+                                 fontSize:11, fontWeight:700 }}>
+                        O'chirish
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
 
             {/* Arenda feature toggle */}
             <div style={{ background:"white", borderRadius:14, border:`1px solid ${C.border}`,
