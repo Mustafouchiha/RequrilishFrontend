@@ -181,6 +181,10 @@ export const productsAPI = {
     apiFetch(`${BASE}/products/${id}`, { method: "PUT", headers: headers(), body: JSON.stringify(body) }).then(handle),
   remove: (id) =>
     apiFetch(`${BASE}/products/${id}`, { method: "DELETE", headers: headers() }).then(handle),
+  markSold: (id) =>
+    apiFetch(`${BASE}/products/${id}/sold`, { method: "POST", headers: headers() }).then(handle),
+  markNotSold: (id) =>
+    apiFetch(`${BASE}/products/${id}/not-sold`, { method: "POST", headers: headers() }).then(handle),
 };
 
 // ─── OFFERS ───────────────────────────────────────────────────────

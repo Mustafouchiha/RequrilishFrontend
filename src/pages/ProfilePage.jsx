@@ -3,12 +3,12 @@ import { Lbl, TInput, BtnPrimary, BtnGhost } from "../components/UI";
 import AvatarUpload from "../components/AvatarUpload";
 import PaymentPage from "./PaymentPage";
 import { C, COND, OPERATOR } from "../constants";
-import { authAPI, rentalsAPI } from "../services/api";
+import { authAPI, rentalsAPI, productsAPI } from "../services/api";
 import {
   Package, Inbox, Trash2,
   Pencil, Check, LogOut, Lock, CreditCard,
   User, Send, MapPin, Wallet, Clock, AlertCircle, CheckCircle, XCircle, Eye,
-  Home, Calendar, BookOpen, X,
+  Home, Calendar, BookOpen, X, ShoppingCart, RotateCcw,
 } from "lucide-react";
 
 function StatusBadge({ status, rejectReason }) {
@@ -16,6 +16,7 @@ function StatusBadge({ status, rejectReason }) {
     active:           { bg:"#E8F8F0", color:"#28A869", icon:<CheckCircle size={9}/>, label:"Faol" },
     pending_approval: { bg:"#FFFBEB", color:"#D97706", icon:<Clock size={9}/>,       label:"Tekshiruvda" },
     pending_payment:  { bg:"#EFF6FF", color:"#2563EB", icon:<AlertCircle size={9}/>, label:"To'lov kutmoqda" },
+    pending_sale:     { bg:"#FEF3C7", color:"#B45309", icon:<Clock size={9}/>,       label:"Sotilmoqda" },
     hidden:           { bg:"#F3F4F6", color:"#6B7280", icon:<XCircle size={9}/>,     label:"Yashirilgan" },
     deleted:          { bg:"#FFF1F0", color:"#FF4D4F", icon:<XCircle size={9}/>,     label:"O'chirilgan" },
   };
@@ -44,6 +45,7 @@ export default function ProfilePage({ user, setUser, myProducts, offers = [],
   const [saving,      setSaving]      = useState(false);
   const [activeTab,   setActiveTab]   = useState("profile");
   const [cancellingId, setCancellingId] = useState(null);
+  const [saleAction,  setSaleAction]  = useState(null); // { id, type: "sold"|"not-sold" }
 
   // Polling orqali user yangilansa, editMode bo'lmasa draft sinxronlansin
   useEffect(() => {
@@ -80,6 +82,28 @@ export default function ProfilePage({ user, setUser, myProducts, offers = [],
       if (setMyBookings) setMyBookings(prev => prev.filter(b => b.id !== bookingId));
     } catch { /* silent */ }
     setCancellingId(null);
+  };
+
+  const handleSaleAction = async (productId, type) => {
+    setSaleAction({ id: productId, type });
+    try {
+      if (type === "sold") {
+        await productsAPI.markSold(productId);
+        if (onDelete) onDelete(productId);
+      } else {
+        const res = await productsAPI.markNotSold(productId);
+        // Balansni yangilash uchun user refetch
+        if (res.refunded > 0 && setUser) {
+          authAPI.me().then(setUser).catch(() => {});
+        }
+        // Status ni local state da active ga o'zgartir
+        // (App.jsx myProducts ni loadData orqali yangilaydi, shu bois refresh kifoya)
+      }
+      // Ro'yxatni yangilash uchun — App.jsx da loadData bor emas bu yerda,
+      // shu bois sahifani qayta yuklaymiz
+      window.location.reload();
+    } catch { /* silent */ }
+    setSaleAction(null);
   };
 
   const pendingCount  = myProducts.filter(p => p.status === "pending_approval" || p.status === "pending_payment").length;
@@ -417,9 +441,45 @@ export default function ProfilePage({ user, setUser, myProducts, offers = [],
                   </div>
                   <div style={{ marginTop:4 }}>
                     <StatusBadge status={p.status || "approved"} rejectReason={p.rejectReason} />
+                    {/* pending_sale: Sotdim / Sotolmadim */}
+                    {p.status === "pending_sale" && (
+                      <div style={{ display:"flex", gap:5, marginTop:6 }}>
+                        <button
+                          disabled={!!saleAction}
+                          onClick={() => handleSaleAction(p.id, "sold")}
+                          style={{ flex:1, padding:"5px 0", borderRadius:8, border:"none",
+                                   background:"#059669", color:"white", fontSize:10, fontWeight:800,
+                                   cursor:"pointer", fontFamily:"inherit",
+                                   display:"flex", alignItems:"center", justifyContent:"center", gap:3,
+                                   opacity: saleAction ? 0.6 : 1 }}>
+                          {saleAction?.id===p.id && saleAction?.type==="sold"
+                            ? "..." : <><ShoppingCart size={10}/> Sotdim</>}
+                        </button>
+                        <button
+                          disabled={!!saleAction}
+                          onClick={() => handleSaleAction(p.id, "not-sold")}
+                          style={{ flex:1, padding:"5px 0", borderRadius:8, border:"none",
+                                   background:"#FEF3C7", color:"#B45309", fontSize:10, fontWeight:800,
+                                   cursor:"pointer", fontFamily:"inherit",
+                                   display:"flex", alignItems:"center", justifyContent:"center", gap:3,
+                                   opacity: saleAction ? 0.6 : 1 }}>
+                          {saleAction?.id===p.id && saleAction?.type==="not-sold"
+                            ? "..." : <><RotateCcw size={10}/> Sotolmadim</>}
+                        </button>
+                      </div>
+                    )}
+                    {/* pending_sale tugashi */}
+                    {p.status === "pending_sale" && p.pendingSaleUntil && (
+                      <div style={{ fontSize:9, color:"#B45309", marginTop:3 }}>
+                        <Clock size={8} style={{ verticalAlign:"middle" }}/>{" "}
+                        {new Date(p.pendingSaleUntil) > new Date()
+                          ? `${Math.ceil((new Date(p.pendingSaleUntil)-new Date())/3600000)}s qoldi`
+                          : "Muddat tugadi"}
+                      </div>
+                    )}
                   </div>
                 </div>
-                {p.status !== "deleted" && (
+                {p.status !== "deleted" && p.status !== "pending_sale" && (
                   <div style={{ display:"flex", alignItems:"center", padding:"0 12px" }}>
                     <button onClick={() => onDelete(p.id)}
                       style={{ width:34, height:34, borderRadius:10, border:"none",
