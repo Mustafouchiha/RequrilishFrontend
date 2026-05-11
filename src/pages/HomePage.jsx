@@ -33,6 +33,8 @@ export default function HomePage({
   const [showOffer,   setShowOffer]   = useState(false);
   const [showNotifs,  setShowNotifs]  = useState(false);
   const [showPayment, setShowPayment] = useState(null);
+  const [toast,       setToast]       = useState("");
+  const toast$ = (msg, ms = 2800) => { setToast(msg); setTimeout(() => setToast(""), ms); };
   const [balancePaying, setBalancePaying] = useState(false);
   const [note,        setNote]        = useState("");
   const [notifTab,    setNotifTab]    = useState("received");
@@ -170,7 +172,7 @@ export default function HomePage({
       });
       if (onProductAdded) onProductAdded(newProd);
       closeAdd();
-    } catch (e) { alert(e.message); }
+    } catch (e) { toast$(e.message || "Xatolik yuz berdi"); }
     finally { setSubmitting(false); }
   };
 
@@ -180,7 +182,8 @@ export default function HomePage({
     try {
       await offersAPI.send(product.id);
       setShowOffer(false); setSelected(null);
-    } catch (e) { alert(e.message); }
+      toast$("✅ Taklif yuborildi!");
+    } catch (e) { toast$(e.message || "Xatolik yuz berdi"); }
     finally { setOfferSending(false); }
   };
 
@@ -193,8 +196,9 @@ export default function HomePage({
       }
       setOffers(prev => prev.map(o => o.id===offerId ? { ...o, status:"paid" } : o));
       setShowPayment(null);
+      toast$("✅ To'lov amalga oshirildi!");
     } catch (e) {
-      alert(e.message);
+      toast$(e.message || "To'lov amalga oshmadi");
     } finally {
       setBalancePaying(false);
     }
@@ -246,7 +250,7 @@ export default function HomePage({
       setShowAddRental(false);
       setRentalForm(EMPTY_RENTAL_FORM || {});
       setRentalStep(1);
-    } catch(e) { alert(e.message); }
+    } catch(e) { toast$(e.message || "Xatolik yuz berdi"); }
     finally { setRentalSubmitting(false); }
   };
 
@@ -259,8 +263,8 @@ export default function HomePage({
       const dates = await rentalsAPI.getBookedDates(selectedRental.id);
       setBookedDates(dates);
       setBookingStart(null); setBookingEnd(null); setBookingNote("");
-      alert("✅ Arenda muvaffaqiyatli band qilindi!");
-    } catch(e) { alert(e.message); }
+      toast$("✅ Arenda muvaffaqiyatli band qilindi!");
+    } catch(e) { toast$(e.message || "Xatolik yuz berdi"); }
     finally { setBookingLoading(false); }
   };
 
@@ -289,6 +293,17 @@ export default function HomePage({
                   margin:"0 auto", position:"relative",
                   overflowY:anySheetOpen?"hidden":"auto",
                   height:anySheetOpen?"100vh":"auto" }}>
+
+      {/* Toast */}
+      {toast && (
+        <div style={{ position:"fixed", bottom:96, left:"50%", transform:"translateX(-50%)",
+                      background:"#1C1C1E", color:"white", fontSize:13, fontWeight:700,
+                      padding:"10px 20px", borderRadius:14, zIndex:9999,
+                      boxShadow:"0 4px 20px rgba(0,0,0,0.25)", whiteSpace:"nowrap",
+                      animation:"fadeIn .2s ease" }}>
+          {toast}
+        </div>
+      )}
 
       <div style={{ position:"fixed", top:-100, right:-80, width:280, height:280, borderRadius:"50%",
                     background:"radial-gradient(circle,rgba(255,179,128,0.12) 0%,transparent 70%)",
@@ -588,7 +603,7 @@ export default function HomePage({
 
             <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:9, marginBottom:18 }}>
               {[
-                [CreditCard, "Narx",  `${selected.price.toLocaleString()} so'm/${selected.unit}`],
+                [CreditCard, "Narx",  `${(selected.price||0).toLocaleString()} so'm/${selected.unit||""}`],
                 [Package,    "Miqdor",`${selected.qty} ${selected.unit}`],
                 [Tag,        "Toifa", selected.category],
               ].map(([Icon,l,v]) => (
@@ -821,7 +836,7 @@ export default function HomePage({
                     </button>
                     <button onClick={async () => {
                         try { await offersAPI.cancel(o.id); setOffers(prev => prev.filter(x => x.id !== o.id)); }
-                        catch(e) { alert(e.message); }
+                        catch(e) { toast$(e.message || "Xatolik yuz berdi"); }
                       }}
                       style={{ width:38, height:38, borderRadius:12, border:"none",
                                background:"#FFF1F0", color:C.danger, cursor:"pointer",
@@ -885,7 +900,7 @@ export default function HomePage({
                       try {
                         await offersAPI.cancel(o.id);
                         if (setSentOffers) setSentOffers(prev => prev.filter(x => x.id !== o.id));
-                      } catch(e) { alert(e.message); }
+                      } catch(e) { toast$(e.message || "Xatolik yuz berdi"); }
                     }}
                     style={{ width:"100%", padding:"10px", borderRadius:12, border:"none",
                              background:"#FFF1F0", color:C.danger, fontSize:12, fontWeight:700,
@@ -919,7 +934,7 @@ export default function HomePage({
                           borderTop:`1px solid ${C.primaryBorder}`, paddingTop:8, marginTop:4 }}>
               <span style={{ fontSize:12, fontWeight:700, color:C.primaryDark }}>Xizmat haqi (5%)</span>
               <span style={{ fontSize:16, fontWeight:900, color:C.primaryDark }}>
-                {Math.round(showPayment.productPrice * 0.05).toLocaleString()} so'm
+                {Math.round((showPayment.productPrice || 0) * 0.05).toLocaleString()} so'm
               </span>
             </div>
           </div>
