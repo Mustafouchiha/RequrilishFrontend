@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import OperatorPostView from "../OperatorPostView";
 import { Pill, BtnPrimary, BtnGhost, Sheet, Lbl, TInput } from "../components/UI";
 import PCard from "../components/ProductCard";
 import RentalCard from "../components/RentalCard";
@@ -93,7 +94,6 @@ export default function HomePage({
 
   // If postId exists, show operator post view
   if (postId) {
-    const OperatorPostView = require('../OperatorPostView').default;
     return <OperatorPostView postId={postId} onClose={() => setPostId(null)} />;
   }
 

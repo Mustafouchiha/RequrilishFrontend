@@ -5,7 +5,7 @@ import PaymentPage from "./PaymentPage";
 import { C, COND, OPERATOR } from "../constants";
 import { authAPI, rentalsAPI, productsAPI } from "../services/api";
 import {
-  Package, Inbox, Trash2,
+  Package, Inbox, Trash2, Plus,
   Pencil, Check, LogOut, Lock, CreditCard,
   User, Send, MapPin, Wallet, Clock, AlertCircle, CheckCircle, XCircle, Eye,
   Home, Calendar, BookOpen, X, ShoppingCart, RotateCcw,
@@ -37,9 +37,9 @@ function StatusBadge({ status, rejectReason }) {
   );
 }
 
-export default function ProfilePage({ user, setUser, myProducts, offers = [],
+export default function ProfilePage({ user, setUser, myProducts, setMyProducts, offers = [],
   myRentals = [], setMyRentals, myBookings = [], setMyBookings,
-  onDelete, onLogout, isOperator, onOpenOperator, arendaEnabled = false }) {
+  onDelete, onLogout, isOperator, onOpenOperator, onAddProduct, arendaEnabled = false }) {
   const [editMode,    setEditMode]    = useState(false);
   const [draft,       setDraft]       = useState({ name: user.name, avatar: user.avatar });
   const [saving,      setSaving]      = useState(false);
@@ -92,16 +92,15 @@ export default function ProfilePage({ user, setUser, myProducts, offers = [],
         if (onDelete) onDelete(productId);
       } else {
         const res = await productsAPI.markNotSold(productId);
-        // Balansni yangilash uchun user refetch
         if (res.refunded > 0 && setUser) {
           authAPI.me().then(setUser).catch(() => {});
         }
-        // Status ni local state da active ga o'zgartir
-        // (App.jsx myProducts ni loadData orqali yangilaydi, shu bois refresh kifoya)
+        if (setMyProducts) {
+          setMyProducts(prev => prev.map(p =>
+            p.id === productId ? { ...p, status: "active", pendingSaleUntil: null } : p
+          ));
+        }
       }
-      // Ro'yxatni yangilash uchun — App.jsx da loadData bor emas bu yerda,
-      // shu bois sahifani qayta yuklaymiz
-      window.location.reload();
     } catch { /* silent */ }
     setSaleAction(null);
   };
@@ -385,8 +384,18 @@ export default function ProfilePage({ user, setUser, myProducts, offers = [],
         </div>
 
         {/* My listings — show all statuses */}
-        <div style={{ display:"flex", alignItems:"center", gap:7, fontSize:14, fontWeight:800, color:C.text, marginBottom:12 }}>
-          <Package size={16} color={C.primaryDark} /> Mening e'lonlarim
+        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:12 }}>
+          <div style={{ display:"flex", alignItems:"center", gap:7, fontSize:14, fontWeight:800, color:C.text }}>
+            <Package size={16} color={C.primaryDark} /> Mening e'lonlarim
+          </div>
+          {onAddProduct && (
+            <button onClick={onAddProduct}
+              style={{ display:"flex", alignItems:"center", gap:4, padding:"6px 12px",
+                       borderRadius:10, border:"none", cursor:"pointer", fontFamily:"inherit",
+                       background:C.primaryDark, color:"white", fontSize:11, fontWeight:700 }}>
+              <Plus size={12}/> E'lon qo'sh
+            </button>
+          )}
         </div>
 
         {/* Hide self-deleted products; still show operator-rejected ones */}
@@ -397,7 +406,15 @@ export default function ProfilePage({ user, setUser, myProducts, offers = [],
               <Inbox size={38} color={C.textMuted} />
             </div>
             <div style={{ fontSize:13, fontWeight:700 }}>Hali e'lonlar yo'q</div>
-            <div style={{ fontSize:11, marginTop:3 }}>E'lon qo'shish uchun + tugmasini bosing</div>
+            {onAddProduct && (
+              <button onClick={onAddProduct}
+                style={{ marginTop:12, display:"inline-flex", alignItems:"center", gap:5,
+                         padding:"9px 18px", borderRadius:12, border:"none", cursor:"pointer",
+                         fontFamily:"inherit", background:C.primaryDark, color:"white",
+                         fontSize:12, fontWeight:700 }}>
+                <Plus size={13}/> E'lon qo'shish
+              </button>
+            )}
           </div>
         ) : (
           myProducts

@@ -371,12 +371,13 @@ export default function App() {
         <>
           <ProfilePage
             user={user} setUser={handleUpdateUser}
-            myProducts={myProducts} offers={offers}
+            myProducts={myProducts} setMyProducts={setMyProducts} offers={offers}
             myRentals={myRentals} setMyRentals={setMyRentals}
             myBookings={myBookings} setMyBookings={setMyBookings}
             onDelete={handleDeleteProduct}
             onLogout={handleLogout} isOperator={isOperator(user)}
             onOpenOperator={() => setNav("operator")}
+            onAddProduct={() => { setHomeAction("openAdd"); setNav("home"); }}
             arendaEnabled={arendaEnabled}
           />
           <BottomNav />
