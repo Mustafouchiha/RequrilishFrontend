@@ -130,8 +130,11 @@ export default function HomePage({
   const filtered = products.filter(p => {
     const q = search.toLowerCase();
     const catOk = activeCats.length === 0 || activeCats.includes(p.category);
-    return catOk
-      && (!search || p.name.toLowerCase().includes(q) || (p.viloyat||"").toLowerCase().includes(q) || (p.tuman||"").toLowerCase().includes(q))
+    const searchOk = !search || [
+      p.name, p.category, p.condition, p.viloyat, p.tuman, p.mahalla,
+      p.unit, p.ownerName, p.description, String(p.price), String(p.qty),
+    ].some(v => (v||"").toLowerCase().includes(q));
+    return catOk && searchOk
       && (!fVil || p.viloyat===fVil)
       && (!fTum || p.tuman===fTum);
   });
@@ -164,11 +167,12 @@ export default function HomePage({
     try {
       const newProd = await productsAPI.create({
         ...form,
-        photo: form.photos[0],
-        photos: form.photos,
-        price: parseInt(form.price),
-        qty: parseInt(form.qty),
-        mahalla: form.mahalla || "",
+        photo:       form.photos[0],
+        photos:      form.photos,
+        price:       parseInt(form.price),
+        qty:         parseInt(form.qty),
+        mahalla:     form.mahalla || "",
+        description: form.description || "",
       });
       if (onProductAdded) onProductAdded(newProd);
       closeAdd();
@@ -273,8 +277,10 @@ export default function HomePage({
   const filteredRentals = rentals.filter(r => {
     const q = search.toLowerCase();
     const catOk = activRentalCats.length === 0 || activRentalCats.includes(r.category);
-    return catOk
-      && (!search || r.name.toLowerCase().includes(q) || (r.viloyat||"").toLowerCase().includes(q))
+    const searchOk = !search || [
+      r.name, r.category, r.viloyat, r.tuman, r.description, r.ownerName,
+    ].some(v => (v||"").toLowerCase().includes(q));
+    return catOk && searchOk
       && (!fVil || r.viloyat === fVil)
       && (!fTum || r.tuman === fTum);
   });
@@ -621,7 +627,7 @@ export default function HomePage({
             {/* View + like stats in detail */}
             <div style={{ display:"flex", gap:14, marginBottom:12, color:C.textMuted, fontSize:12 }}>
               <span style={{ display:"flex", alignItems:"center", gap:4 }}>
-                <Eye size={13} /> {selected.viewCount || 0} ko'rish
+                <Eye size={13} /> {selected.viewCount || 0} ko'rildi
               </span>
               <span style={{ display:"flex", alignItems:"center", gap:4,
                              color: selected.isLiked ? "#EF4444" : C.textMuted }}>
@@ -630,7 +636,42 @@ export default function HomePage({
                   fill={selected.isLiked ? "#EF4444" : "none"} />
                 {selected.likeCount || 0} like
               </span>
+              {selected.createdAt && (
+                <span style={{ display:"flex", alignItems:"center", gap:4 }}>
+                  📅 {new Date(selected.createdAt).toLocaleDateString("uz-UZ")}
+                </span>
+              )}
             </div>
+
+            {/* Description */}
+            {selected.description && (
+              <div style={{ background:C.bg, borderRadius:13, padding:"11px 13px",
+                            border:`1px solid ${C.border}`, marginBottom:14 }}>
+                <div style={{ fontSize:10, fontWeight:700, color:C.textMuted, marginBottom:4,
+                              textTransform:"uppercase", letterSpacing:0.5 }}>📝 Tavsif</div>
+                <div style={{ fontSize:12, color:C.text, lineHeight:1.6 }}>{selected.description}</div>
+              </div>
+            )}
+
+            {/* Sotuvchi ma'lumotlari */}
+            {selected.ownerName && selected.ownerId !== user.id && loggedIn && (
+              <div style={{ background:C.bg, borderRadius:13, padding:"11px 13px",
+                            border:`1px solid ${C.border}`, marginBottom:14 }}>
+                <div style={{ fontSize:10, fontWeight:700, color:C.textMuted, marginBottom:6,
+                              textTransform:"uppercase", letterSpacing:0.5 }}>👤 Sotuvchi</div>
+                <div style={{ fontSize:13, fontWeight:800, color:C.text, marginBottom:2 }}>{selected.ownerName}</div>
+                {selected.ownerPhone && (
+                  <div style={{ fontSize:11, color:C.textSub, display:"flex", alignItems:"center", gap:4 }}>
+                    <Phone size={11}/> {selected.ownerPhone}
+                  </div>
+                )}
+                {selected.ownerTelegram && (
+                  <div style={{ fontSize:11, color:"#0088CC", display:"flex", alignItems:"center", gap:4 }}>
+                    <Send size={11}/> {selected.ownerTelegram}
+                  </div>
+                )}
+              </div>
+            )}
 
             {selected.ownerId === user.id ? (
               <div style={{ background:C.primaryLight, border:`1px solid ${C.primaryBorder}`,
@@ -659,6 +700,49 @@ export default function HomePage({
                 <BtnGhost onClick={() => setSelected(null)}>Yopish</BtnGhost>
               </div>
             )}
+
+            {/* O'xshash mahsulotlar */}
+            {(() => {
+              const similar = products.filter(p => p.id !== selected.id && p.category === selected.category).slice(0,4);
+              if (!similar.length) return null;
+              return (
+                <div style={{ marginTop:18 }}>
+                  <div style={{ fontSize:12, fontWeight:800, color:C.text, marginBottom:10,
+                                display:"flex", alignItems:"center", gap:5 }}>
+                    🔗 O'xshash mahsulotlar — {selected.category}
+                  </div>
+                  <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
+                    {similar.map(sp => {
+                      const scc = COND[sp.condition] || COND["Yaxshi"];
+                      return (
+                        <div key={sp.id} onClick={() => { openSelected(sp); }}
+                          style={{ background:C.bg, borderRadius:14, overflow:"hidden",
+                                   border:`1px solid ${C.border}`, cursor:"pointer" }}>
+                          <div style={{ width:"100%", height:70, background:C.primaryLight,
+                                        display:"flex", alignItems:"center", justifyContent:"center" }}>
+                            {sp.photo
+                              ? <img src={sp.photo} alt={sp.name}
+                                  style={{ width:"100%", height:"100%", objectFit:"cover" }}
+                                  onError={e=>{e.target.style.display="none";}} />
+                              : <ImageIcon size={24} color={C.primaryBorder} style={{ opacity:0.4 }} />
+                            }
+                          </div>
+                          <div style={{ padding:"7px 9px" }}>
+                            <div style={{ fontSize:10, fontWeight:800, color:C.text, marginBottom:2,
+                                          overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{sp.name}</div>
+                            <div style={{ fontSize:9, fontWeight:700, color:C.primaryDark }}>{(sp.price||0).toLocaleString()} so'm/{sp.unit}</div>
+                            <div style={{ display:"flex", alignItems:"center", gap:3, marginTop:3 }}>
+                              <span style={{ fontSize:8, fontWeight:700, padding:"1px 5px", borderRadius:6,
+                                             background:scc.bg, color:scc.text }}>● {sp.condition}</span>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })()}
           </Sheet>
         );
       })()}
@@ -1065,6 +1149,21 @@ export default function HomePage({
               <Lbl>Narx (so'm) *</Lbl>
               <TInput type="number" min="0" placeholder="50000" value={form.price} onChange={f("price")} />
 
+              <Lbl>Tavsif (ixtiyoriy)</Lbl>
+              <textarea
+                placeholder="Mahsulot haqida qo'shimcha ma'lumot: holati, sababi, qo'shimcha xususiyatlari..."
+                value={form.description || ""}
+                onChange={e => f("description")(e.target.value)}
+                rows={3}
+                style={{ width:"100%", boxSizing:"border-box", padding:"10px 13px",
+                         borderRadius:12, border:`1.5px solid ${C.border}`, fontSize:13,
+                         color:C.text, fontFamily:"inherit", outline:"none",
+                         marginBottom:13, background:C.bg, resize:"vertical",
+                         transition:"border-color 0.2s" }}
+                onFocus={e=>e.target.style.borderColor=C.primary}
+                onBlur={e=>e.target.style.borderColor=C.border}
+              />
+
               <div style={{ display:"flex", gap:9 }}>
                 <BtnGhost onClick={() => setStep(1)}><ArrowLeft size={14} /> Orqaga</BtnGhost>
                 <BtnPrimary onClick={() => canStep3 && setStep(3)} disabled={!canStep3}>
@@ -1178,16 +1277,43 @@ export default function HomePage({
                 </div>
               </div>
 
-              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8, marginBottom:16 }}>
-                {[["Kategoriya",form.category],["Holat",form.condition],
-                  ["Miqdor",`${form.qty} ${form.unit}`],
-                  ["Mahalla",form.mahalla||form.tuman||form.viloyat]].map(([k,v])=>(
+              {/* To'liq ma'lumotlar */}
+              <div style={{ fontSize:10, fontWeight:800, color:C.textSub, marginBottom:8,
+                            textTransform:"uppercase", letterSpacing:0.5 }}>Post haqida to'liq ma'lumot</div>
+              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8, marginBottom:12 }}>
+                {[
+                  ["🏷 Kategoriya", form.category],
+                  ["⭐ Holat",       form.condition],
+                  ["📦 Miqdor",     `${form.qty} ${form.unit}`],
+                  ["💰 Narx",       `${form.price?parseInt(form.price).toLocaleString():"—"} so'm`],
+                  ["📐 O'lchov",    form.unit],
+                  ["📍 Joylashuv",  form.mahalla||form.tuman||form.viloyat],
+                ].map(([k,v]) => (
                   <div key={k} style={{ background:C.bg, border:`1px solid ${C.border}`, borderRadius:12, padding:"9px 11px" }}>
-                    <div style={{ fontSize:9, color:C.textMuted, marginBottom:1 }}>{k}</div>
+                    <div style={{ fontSize:9, color:C.textMuted, marginBottom:2 }}>{k}</div>
                     <div style={{ fontSize:11, fontWeight:700, color:C.text }}>{v}</div>
                   </div>
                 ))}
               </div>
+
+              {/* Sotuvchi ma'lumoti */}
+              <div style={{ background:C.bg, border:`1px solid ${C.border}`, borderRadius:12,
+                            padding:"10px 12px", marginBottom:12 }}>
+                <div style={{ fontSize:9, color:C.textMuted, marginBottom:4,
+                              textTransform:"uppercase", letterSpacing:0.5 }}>👤 Sotuvchi ma'lumoti</div>
+                <div style={{ fontSize:12, fontWeight:700, color:C.text }}>{user.name}</div>
+                <div style={{ fontSize:11, color:C.textSub }}>+998 {user.phone}{user.telegram ? ` · ${user.telegram}` : ""}</div>
+              </div>
+
+              {/* Tavsif */}
+              {form.description && (
+                <div style={{ background:C.bg, border:`1px solid ${C.border}`, borderRadius:12,
+                              padding:"10px 12px", marginBottom:12 }}>
+                  <div style={{ fontSize:9, color:C.textMuted, marginBottom:4,
+                                textTransform:"uppercase", letterSpacing:0.5 }}>📝 Tavsif</div>
+                  <div style={{ fontSize:12, color:C.text, lineHeight:1.6 }}>{form.description}</div>
+                </div>
+              )}
 
               <div style={{ display:"flex", gap:9 }}>
                 <BtnGhost onClick={() => setStep(3)}><ArrowLeft size={14} /> Orqaga</BtnGhost>

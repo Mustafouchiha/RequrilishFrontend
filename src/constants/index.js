@@ -74,7 +74,7 @@ export const INIT_PRODUCTS = [
 ];
 
 export const INIT_USER = { id:1, name:"Abdulloh Karimov", phone:"+998 90 123 45 67", telegram:"@abdulloh_k", avatar:null, joined:"2024-03-15" };
-export const EMPTY_FORM = { name:"", category:"g'isht", price:"", unit:"dona", qty:"", viloyat:"", tuman:"", condition:"A'lo", photos:[], mahalla:"" };
+export const EMPTY_FORM = { name:"", category:"g'isht", price:"", unit:"dona", qty:"", viloyat:"", tuman:"", condition:"A'lo", photos:[], mahalla:"", description:"" };
 
 export const APP_NAME = "ReQurilish";
 

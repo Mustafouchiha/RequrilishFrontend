@@ -1,14 +1,15 @@
 import { useState, useEffect } from "react";
-import { Lbl, TInput, BtnPrimary, BtnGhost } from "../components/UI";
+import { Lbl, TInput, BtnPrimary, BtnGhost, Sheet, Pill } from "../components/UI";
 import AvatarUpload from "../components/AvatarUpload";
+import PhotoUpload from "../components/PhotoUpload";
 import PaymentPage from "./PaymentPage";
-import { C, COND, OPERATOR } from "../constants";
+import { C, COND, OPERATOR, UZ, CAT_ICO } from "../constants";
 import { authAPI, rentalsAPI, productsAPI } from "../services/api";
 import {
   Package, Inbox, Trash2, Plus,
   Pencil, Check, LogOut, Lock, CreditCard,
   User, Send, MapPin, Wallet, Clock, AlertCircle, CheckCircle, XCircle, Eye,
-  Home, Calendar, BookOpen, X, ShoppingCart, RotateCcw,
+  Home, Calendar, BookOpen, X, ShoppingCart, RotateCcw, Save,
 } from "lucide-react";
 
 function StatusBadge({ status, rejectReason }) {
@@ -45,7 +46,54 @@ export default function ProfilePage({ user, setUser, myProducts, setMyProducts, 
   const [saving,      setSaving]      = useState(false);
   const [activeTab,   setActiveTab]   = useState("profile");
   const [cancellingId, setCancellingId] = useState(null);
-  const [saleAction,  setSaleAction]  = useState(null); // { id, type: "sold"|"not-sold" }
+  const [saleAction,  setSaleAction]  = useState(null);
+
+  // Product edit state
+  const [editProd,   setEditProd]   = useState(null);
+  const [prodDraft,  setProdDraft]  = useState(null);
+  const [prodSaving, setProdSaving] = useState(false);
+
+  const openEditProd = (p) => {
+    setProdDraft({
+      name:        p.name,
+      category:    p.category || "boshqa",
+      price:       String(p.price),
+      unit:        p.unit || "dona",
+      qty:         String(p.qty),
+      condition:   p.condition || "Yaxshi",
+      viloyat:     p.viloyat || "",
+      tuman:       p.tuman || "",
+      mahalla:     p.mahalla || "",
+      description: p.description || "",
+      photo:       p.photo || null,
+    });
+    setEditProd(p);
+  };
+
+  const pf = (key) => (val) => setProdDraft(prev => ({ ...prev, [key]: val }));
+
+  const saveEditProd = async () => {
+    if (!prodDraft.name || !prodDraft.price || !prodDraft.qty || !prodDraft.viloyat) return;
+    setProdSaving(true);
+    try {
+      await productsAPI.update(editProd.id, {
+        ...prodDraft,
+        price: parseInt(prodDraft.price),
+        qty:   parseInt(prodDraft.qty),
+      });
+      if (setMyProducts) {
+        setMyProducts(prev => prev.map(p =>
+          p.id === editProd.id ? { ...p, ...prodDraft, price: parseInt(prodDraft.price), qty: parseInt(prodDraft.qty) } : p
+        ));
+      }
+      setEditProd(null);
+      setProdDraft(null);
+    } catch (e) {
+      alert(e.message || "Xatolik yuz berdi");
+    } finally {
+      setProdSaving(false);
+    }
+  };
 
   // Polling orqali user yangilansa, editMode bo'lmasa draft sinxronlansin
   useEffect(() => {
@@ -497,12 +545,21 @@ export default function ProfilePage({ user, setUser, myProducts, setMyProducts, 
                   </div>
                 </div>
                 {p.status !== "deleted" && p.status !== "pending_sale" && (
-                  <div style={{ display:"flex", alignItems:"center", padding:"0 12px" }}>
+                  <div style={{ display:"flex", flexDirection:"column", alignItems:"center",
+                                justifyContent:"center", padding:"0 10px", gap:8 }}>
+                    <button onClick={() => openEditProd(p)}
+                      title="Tahrirlash"
+                      style={{ width:34, height:34, borderRadius:10, border:"none",
+                               background:C.primaryLight, color:C.primaryDark,
+                               cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>
+                      <Pencil size={14} />
+                    </button>
                     <button onClick={() => onDelete(p.id)}
+                      title="O'chirish"
                       style={{ width:34, height:34, borderRadius:10, border:"none",
                                background:C.dangerLight, color:C.danger,
                                cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>
-                      <Trash2 size={16} />
+                      <Trash2 size={14} />
                     </button>
                   </div>
                 )}
@@ -535,6 +592,145 @@ export default function ProfilePage({ user, setUser, myProducts, setMyProducts, 
         <div style={{ height:16 }} />
 
       </>}
+
+      {/* ═══ MAHSULOT TAHRIRLASH SHEET ═══ */}
+      {editProd && prodDraft && (
+        <Sheet onClose={() => { setEditProd(null); setProdDraft(null); }} maxH="92vh">
+          <div style={{ fontSize:16, fontWeight:800, color:C.text, marginBottom:16,
+                        display:"flex", alignItems:"center", gap:7 }}>
+            <Pencil size={16} color={C.primaryDark} /> E'lonni tahrirlash
+          </div>
+
+          {/* Rasm */}
+          <Lbl>Rasm</Lbl>
+          <PhotoUpload photos={prodDraft.photo ? [prodDraft.photo] : []}
+            onPhotos={photos => pf("photo")(photos[0] || null)} />
+
+          {/* Nom */}
+          <Lbl>Nom *</Lbl>
+          <TInput placeholder="Masalan: Eski g'isht" value={prodDraft.name} onChange={pf("name")} />
+
+          {/* Kategoriya */}
+          <Lbl>Kategoriya</Lbl>
+          <div style={{ display:"flex", flexWrap:"wrap", gap:6, marginBottom:14 }}>
+            {["g'isht","metall","yog'och","beton","boshqa"].map(c => (
+              <Pill key={c} active={prodDraft.category===c} onClick={()=>pf("category")(c)}>
+                {CAT_ICO[c]} {c}
+              </Pill>
+            ))}
+          </div>
+
+          {/* Holat */}
+          <Lbl>Holati</Lbl>
+          <div style={{ display:"flex", gap:7, marginBottom:14 }}>
+            {["A'lo","Yaxshi","O'rta"].map(c => { const cc=COND[c]; return (
+              <button key={c} onClick={()=>pf("condition")(c)}
+                style={{ flex:1, padding:"9px 4px", borderRadius:11,
+                         border:`1.5px solid ${prodDraft.condition===c?cc.text:C.border}`,
+                         background:prodDraft.condition===c?cc.bg:C.card,
+                         color:prodDraft.condition===c?cc.text:C.textSub,
+                         fontSize:11, fontWeight:700, cursor:"pointer", fontFamily:"inherit" }}>
+                {c}
+              </button>
+            );})}
+          </div>
+
+          {/* Narx + O'lchov */}
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
+            <div>
+              <Lbl>Narx (so'm) *</Lbl>
+              <TInput type="number" placeholder="50000" value={prodDraft.price} onChange={pf("price")} />
+            </div>
+            <div>
+              <Lbl>O'lchov</Lbl>
+              <select value={prodDraft.unit} onChange={e=>pf("unit")(e.target.value)}
+                style={{ width:"100%", padding:"10px 11px", borderRadius:12,
+                         border:`1.5px solid ${C.border}`, fontSize:13, color:C.text,
+                         fontFamily:"inherit", outline:"none", background:C.bg, marginBottom:13 }}>
+                {["dona","kg","m²","m","m³","ton"].map(u => <option key={u}>{u}</option>)}
+              </select>
+            </div>
+          </div>
+
+          {/* Miqdor */}
+          <Lbl>Miqdori *</Lbl>
+          <TInput type="number" placeholder="100" value={prodDraft.qty} onChange={pf("qty")} />
+
+          {/* Joylashuv */}
+          <Lbl>Viloyat / Shahar *</Lbl>
+          <div style={{ display:"flex", flexWrap:"wrap", gap:6, marginBottom:14 }}>
+            {Object.keys(UZ).map(v => (
+              <Pill key={v} active={prodDraft.viloyat===v}
+                onClick={() => { pf("viloyat")(v); pf("tuman")(""); }}>
+                {v}
+              </Pill>
+            ))}
+          </div>
+          {prodDraft.viloyat && (
+            <>
+              <Lbl>Tuman — {prodDraft.viloyat}</Lbl>
+              <div style={{ display:"flex", flexWrap:"wrap", gap:6, marginBottom:14 }}>
+                {UZ[prodDraft.viloyat].map(t => (
+                  <Pill key={t} active={prodDraft.tuman===t} accent onClick={() => pf("tuman")(t)}>{t}</Pill>
+                ))}
+              </div>
+            </>
+          )}
+
+          {/* Mahalla */}
+          <Lbl>Mahalla (ixtiyoriy)</Lbl>
+          <TInput placeholder="Mahalla nomi" value={prodDraft.mahalla || ""} onChange={pf("mahalla")} />
+
+          {/* Tavsif */}
+          <Lbl>Tavsif (ixtiyoriy)</Lbl>
+          <textarea
+            placeholder="Mahsulot haqida qo'shimcha ma'lumot..."
+            value={prodDraft.description || ""}
+            onChange={e => pf("description")(e.target.value)}
+            rows={3}
+            style={{ width:"100%", boxSizing:"border-box", padding:"10px 13px",
+                     borderRadius:12, border:`1.5px solid ${C.border}`, fontSize:13,
+                     color:C.text, fontFamily:"inherit", outline:"none",
+                     marginBottom:14, background:C.bg, resize:"vertical",
+                     transition:"border-color 0.2s" }}
+            onFocus={e=>e.target.style.borderColor=C.primary}
+            onBlur={e=>e.target.style.borderColor=C.border}
+          />
+
+          {/* To'liq ma'lumot xulosa */}
+          <div style={{ background:C.primaryLight, borderRadius:14, padding:"12px 14px",
+                        border:`1px solid ${C.primaryBorder}`, marginBottom:16 }}>
+            <div style={{ fontSize:10, fontWeight:800, color:C.textSub, marginBottom:8,
+                          textTransform:"uppercase", letterSpacing:0.5 }}>Post haqida to'liq ma'lumot</div>
+            {[
+              ["Nom",        prodDraft.name || "—"],
+              ["Kategoriya", prodDraft.category],
+              ["Holat",      prodDraft.condition],
+              ["Narx",       `${prodDraft.price ? parseInt(prodDraft.price).toLocaleString() : "—"} so'm/${prodDraft.unit}`],
+              ["Miqdor",     `${prodDraft.qty || "—"} ${prodDraft.unit}`],
+              ["Manzil",     `${prodDraft.viloyat}${prodDraft.tuman ? ` › ${prodDraft.tuman}` : ""}${prodDraft.mahalla ? ` › ${prodDraft.mahalla}` : ""}`],
+            ].map(([k, v]) => (
+              <div key={k} style={{ display:"flex", justifyContent:"space-between",
+                                    padding:"5px 0", borderBottom:`1px solid ${C.primaryBorder}` }}>
+                <span style={{ fontSize:11, color:C.textSub }}>{k}</span>
+                <span style={{ fontSize:11, fontWeight:700, color:C.text, textAlign:"right", maxWidth:"60%" }}>{v}</span>
+              </div>
+            ))}
+          </div>
+
+          <div style={{ display:"flex", gap:9 }}>
+            <BtnGhost onClick={() => { setEditProd(null); setProdDraft(null); }}>Bekor</BtnGhost>
+            <BtnPrimary
+              onClick={saveEditProd}
+              disabled={prodSaving || !prodDraft.name || !prodDraft.price || !prodDraft.qty || !prodDraft.viloyat}>
+              {prodSaving
+                ? "⏳ Saqlanmoqda..."
+                : <><Save size={14}/> Saqlash</>
+              }
+            </BtnPrimary>
+          </div>
+        </Sheet>
+      )}
     </div>
   );
 }
